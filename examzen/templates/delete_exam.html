@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card-body">
+    <form method="POST">
+        <p>Are you sure you want to delete the exam "{{ exam.name }}"?</p>
+        <input type="submit" value="Delete" class="btn btn-danger">
+        <a href="{{ url_for('exam_dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+{% endblock %}

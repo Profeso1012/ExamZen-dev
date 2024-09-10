@@ -1,0 +1,408 @@
+from flask import Flask, request, jsonify, render_template, flash, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, IntegerField, DateField, TimeField
+from wtforms.validators import DataRequired, NumberRange
+from datetime import datetime
+import uuid
+from flask_login import current_user, login_required
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///examzen.db'
+app.config['SECRET_KEY'] = 'your_secret_key_here'  # Add a secret key for CSRF protection
+db = SQLAlchemy(app)
+
+# Database models (unchanged, using your existing models)
+class Exam(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    num_questions = db.Column(db.Integer, nullable=False)
+    num_options = db.Column(db.Integer, nullable=False)
+    num_students = db.Column(db.Integer, nullable=False)
+    exam_date = db.Column(db.DateTime, nullable=False)
+    duration = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    created_by = db.relationship('User', backref=db.backref('exams', lazy=True))
+
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
+    question_text = db.Column(db.String(500), nullable=False)
+    question_number = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    exam = db.relationship('Exam', backref=db.backref('questions', lazy=True))
+
+class Option(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
+    option_text = db.Column(db.String(200), nullable=False)
+    option_letter = db.Column(db.String(1), nullable=False)
+    is_correct = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    question = db.relationship('Question', backref=db.backref('options', lazy=True))
+
+class ExamCode(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    code = db.Column(db.String(10), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    exam = db.relationship('Exam', backref=db.backref('exam_codes', lazy=True))
+    user = db.relationship('User', backref='exam_codes', lazy=True)
+
+# Form class (unchanged)
+class ExamForm(FlaskForm):
+    name = StringField('Exam Name', validators=[DataRequired()])
+    num_questions = IntegerField('Number of Questions', validators=[DataRequired(), NumberRange(min=1, max=10)])
+    num_options = IntegerField('Number of Options', validators=[DataRequired(), NumberRange(min=2, max=5)])
+    num_students = IntegerField('Number of Students', validators=[DataRequired(), NumberRange(min=1, max=15)])
+    exam_date = DateField('Exam Date', validators=[DataRequired()])
+    exam_time = TimeField('Exam Time', validators=[DataRequired()])
+    duration = IntegerField('Duration (minutes)', validators=[DataRequired(), NumberRange(min=1, max=30)])
+
+@app.route('/')
+def index():
+    return render_template('create_exam.html')
+
+@app.route('/create_exam', methods=['GET', 'POST'])
+@login_required
+def create_exam():
+    form = ExamForm()
+    if form.validate_on_submit():
+        # Combine exam date and time into a single datetime object
+        exam_datetime = datetime.combine(form.exam_date.data, form.exam_time.data)
+        
+        new_exam = Exam(
+            name=form.name.data,
+            num_questions=form.num_questions.data,
+            num_options=form.num_options.data,
+            num_students=form.num_students.data,
+            exam_date=exam_datetime,
+            duration=form.duration.data,
+            created_by_id=current_user.id
+        )
+        db.session.add(new_exam)
+        db.session.commit()
+
+        # Generate exam codes for students
+        for _ in range(form.num_students.data):
+            code = str(uuid.uuid4())[:7].upper()
+            exam_code = ExamCode(exam_id=new_exam.id, code=code)
+            db.session.add(exam_code)
+        db.session.commit()
+
+        flash('Exam created successfully! Please add questions.', 'success')
+        return redirect(url_for('add_questions', exam_id=new_exam.id))
+
+    return render_template('create_exam.html', form=form)
+
+@app.route('/add_questions/<int:exam_id>', methods=['GET', 'POST'])
+@login_required
+def add_questions(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    if request.method == 'POST':
+        question_text = request.form.get('question_text')
+        question_number = request.form.get('question_number')
+        options = request.form.getlist('option_text[]')
+        correct_option = request.form.get('correct_option')
+
+        new_question = Question(
+            exam_id=exam.id,
+            question_text=question_text,
+            question_number=question_number
+        )
+        db.session.add(new_question)
+        db.session.flush()  # This will populate the id of the new question
+
+        for i, option_text in enumerate(options):
+            new_option = Option(
+                question_id=new_question.id,
+                option_text=option_text,
+                option_letter=chr(65 + i),
+                is_correct=(str(i) == correct_option)
+            )
+            db.session.add(new_option)
+
+        db.session.commit()
+
+        if int(question_number) < exam.num_questions:
+            flash('Question added successfully! Please add the next question.', 'success')
+            return redirect(url_for('add_questions', exam_id=exam.id))
+        else:
+            flash('All questions have been added. Exam creation complete!', 'success')
+            return redirect(url_for('exam_dashboard'))  # You'll need to create this route
+
+    return render_template('add_questions.html', exam=exam)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+second
+
+from flask import Flask, request, jsonify, render_template, flash, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, IntegerField, DateField, TimeField
+from wtforms.validators import DataRequired, NumberRange
+from datetime import datetime
+import uuid
+from flask_login import current_user, login_required
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///examzen.db'
+app.config['SECRET_KEY'] = 'your_secret_key_here'  # Add a secret key for CSRF protection
+db = SQLAlchemy(app)
+
+# Database models (unchanged, using your existing models)
+class Exam(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    num_questions = db.Column(db.Integer, nullable=False)
+    num_options = db.Column(db.Integer, nullable=False)
+    num_students = db.Column(db.Integer, nullable=False)
+    exam_date = db.Column(db.DateTime, nullable=False)
+    duration = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    created_by = db.relationship('User', backref=db.backref('exams', lazy=True))
+
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
+    question_text = db.Column(db.String(500), nullable=False)
+    question_number = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    exam = db.relationship('Exam', backref=db.backref('questions', lazy=True))
+
+class Option(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
+    option_text = db.Column(db.String(200), nullable=False)
+    option_letter = db.Column(db.String(1), nullable=False)
+    is_correct = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    question = db.relationship('Question', backref=db.backref('options', lazy=True))
+
+class ExamCode(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    code = db.Column(db.String(10), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    exam = db.relationship('Exam', backref=db.backref('exam_codes', lazy=True))
+    user = db.relationship('User', backref='exam_codes', lazy=True)
+
+# Form class (unchanged)
+class ExamForm(FlaskForm):
+    name = StringField('Exam Name', validators=[DataRequired()])
+    num_questions = IntegerField('Number of Questions', validators=[DataRequired(), NumberRange(min=1, max=10)])
+    num_options = IntegerField('Number of Options', validators=[DataRequired(), NumberRange(min=2, max=5)])
+    num_students = IntegerField('Number of Students', validators=[DataRequired(), NumberRange(min=1, max=15)])
+    exam_date = DateField('Exam Date', validators=[DataRequired()])
+    exam_time = TimeField('Exam Time', validators=[DataRequired()])
+    duration = IntegerField('Duration (minutes)', validators=[DataRequired(), NumberRange(min=1, max=30)])
+
+@app.route('/')
+def index():
+    return render_template('create_exam.html')
+
+@app.route('/create_exam', methods=['GET', 'POST'])
+@login_required
+def create_exam():
+    form = ExamForm()
+    if form.validate_on_submit():
+        # Combine exam date and time into a single datetime object
+        exam_datetime = datetime.combine(form.exam_date.data, form.exam_time.data)
+        
+        new_exam = Exam(
+            name=form.name.data,
+            num_questions=form.num_questions.data,
+            num_options=form.num_options.data,
+            num_students=form.num_students.data,
+            exam_date=exam_datetime,
+            duration=form.duration.data,
+            created_by_id=current_user.id
+        )
+        db.session.add(new_exam)
+        db.session.commit()
+
+        # Generate exam codes for students
+        for _ in range(form.num_students.data):
+            code = str(uuid.uuid4())[:7].upper()
+            exam_code = ExamCode(exam_id=new_exam.id, code=code)
+            db.session.add(exam_code)
+        db.session.commit()
+
+        flash('Exam created successfully! Please add questions.', 'success')
+        return redirect(url_for('add_questions', exam_id=new_exam.id))
+
+    return render_template('create_exam.html', form=form)
+
+@app.route('/add_questions/<int:exam_id>', methods=['GET', 'POST'])
+@login_required
+def add_questions(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    if request.method == 'POST':
+        question_text = request.form.get('question_text')
+        question_number = request.form.get('question_number')
+        options = request.form.getlist('option_text[]')
+        correct_option = request.form.get('correct_option')
+
+        new_question = Question(
+            exam_id=exam.id,
+            question_text=question_text,
+            question_number=question_number
+        )
+        db.session.add(new_question)
+        db.session.flush()  # This will populate the id of the new question
+
+        for i, option_text in enumerate(options):
+            new_option = Option(
+                question_id=new_question.id,
+                option_text=option_text,
+                option_letter=chr(65 + i),
+                is_correct=(str(i) == correct_option)
+            )
+            db.session.add(new_option)
+
+        db.session.commit()
+
+        if int(question_number) < exam.num_questions:
+            flash('Question added successfully! Please add the next question.', 'success')
+            return redirect(url_for('add_questions', exam_id=exam.id))
+        else:
+            flash('All questions have been added. Exam creation complete!', 'success')
+            return redirect(url_for('exam_dashboard'))  # You'll need to create this route
+
+    return render_template('add_questions.html', exam=exam)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+-------------------------------------------------------------------------------------------------------
+
+{% extends "layout.html" %}
+
+{% block title %}Add Questions - ExamZen{% endblock %}
+
+{% block content %}
+<div class="card animate__animated animate__fadeIn">
+    <div class="card-header bg-primary text-white">
+        <h2 class="mb-0"><i class="fas fa-question-circle"></i> Add Questions for {{ exam.name }}</h2>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('add_questions', exam_id=exam.id) }}" method="post">
+            <div class="form-group">
+                <label for="questionText">Question Text</label>
+                <textarea class="form-control" id="questionText" name="question_text" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="questionNumber">Question Number</label>
+                <input type="number" class="form-control" id="questionNumber" name="question_number" value="{{ exam.questions|length + 1 }}" readonly>
+            </div>
+            <div id="optionsContainer">
+                {% for i in range(exam.num_options) %}
+                <div class="form-group">
+                    <label for="option{{ i }}">Option {{ chr(65 + i) }}</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="option{{ i }}" name="option_text[]" required>
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <input type="radio" name="correct_option" value="{{ i }}" required>
+                                <label class="mb-0 ml-2">Correct</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-save"></i> Save Question
+            </button>
+        </form>
+    </div>
+    <div class="card-footer text-muted">
+        <div class="d-flex justify-content-between align-items-center">
+            <span>Question {{ exam.questions|length + 1 }} of {{ exam.num_questions }}</span>
+            <div class="progress-circles">
+                {% for i in range(exam.num_questions) %}
+                    <span class="circle {% if i < exam.questions|length %}filled{% endif %}"></span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .progress-circles {
+        display: flex;
+        gap: 5px;
+    }
+    .circle {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #e0e0e0;
+        display: inl}
+-------------------------------------------------------
+
+{% extends "layout.html" %}
+
+{% block title %}Create Exam{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Create a New Exam</h2>
+    <form action="{{ url_for('create_exam') }}" method="post">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            <label for="examName">Exam Name</label>
+            {{ form.name(class="form-control", id="examName", placeholder="Enter exam name") }}
+        </div>
+        <div class="form-group">
+            <label for="numQuestions">Number of Questions (max 10)</label>
+            {{ form.num_questions(class="form-control", id="numQuestions", placeholder="Enter number of questions") }}
+        </div>
+        <div class="form-group">
+            <label for="numOptions">Number of Options per Question</label>
+            {{ form.num_options(class="form-control", id="numOptions", placeholder="Enter number of options per question") }}
+        </div>
+        <div class="form-group">
+            <label for="numStudents">Number of Students (max 15)</label>
+            {{ form.num_students(class="form-control", id="numStudents", placeholder="Enter number of students") }}
+        </div>
+        <div class="form-group">
+            <label for="examDate">Exam Date (YYYY-MM-DD)</label>
+            {{ form.exam_date(class="form-control", id="examDate") }}
+        </div>
+        <div class="form-group">
+            <label for="examTime">Exam Time (HH:MM)</label>
+            {{ form.exam_time(class="form-control", id="examTime") }}
+        </div>
+        <div class="form-group">
+            <label for="duration">Duration (minutes, max 30)</label>
+            {{ form.duration(class="form-control", id="duration", placeholder="Enter exam duration") }}
+        </div>
+        <button type="submit" class="btn btn-primary">Create Exam</button>
+    </form>
+</div>
+{% endblock %}
+
+-------------------------------------------------------------------
