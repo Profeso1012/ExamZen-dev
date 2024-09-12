@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Welcome, Examiner {{ current_user.username }}!</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-tasks mr-2"></i>Manage Exams</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('create_exam') }}" class="btn btn-success mb-3"><i class="fas fa-plus mr-2"></i>Create New Exam</a>
+                    <a href="{{ url_for('exam_dashboard') }}" class="btn btn-success mb-3"><i class="fas fa-plus mr-2"></i>Your Exams</a>
+                    {% if exams %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Exam Name</th>
+                                        <th>Date</th>
+                                        <th>Students</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for exam in exams %}
+                                    <tr>
+                                        <td>{{ exam.name }}</td>
+                                        <td>{{ exam.exam_date | strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ exam.num_students }}</td>
+                                        <td>
+                                            <a href="{{ url_for('update_exam', exam_id=exam.id) }}" class="btn btn-sm btn-primary">Update</a>
+                                            <a href="{{ url_for('view_exam_results', exam_id=exam.id) }}" class="btn btn-sm btn-info">View Results</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">You haven't created any exams yet. Use the 'Create New Exam' button to get started.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-chart-pie mr-2"></i>Exam Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="examStatsChart"></canvas>
+                    <ul class="list-group list-group-flush mt-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Exams Created
+                            <span class="badge badge-primary badge-pill">{{ exams|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Students Enrolled
+                            <span class="badge badge-primary badge-pill">{{ exams|sum(attribute='num_students') }}</span>
+                        </li>
+                    </ul>
+                    <a href="{{ url_for('exam_statistics') }}" class="btn btn-outline-success btn-block mt-3">View Detailed Statistics</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-clock mr-2"></i>Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        <li class="list-group-item">John Doe completed Math Final (Score: 92/100)</li>
+                        <li class="list-group-item">5 new students enrolled in Science Quiz</li>
+                        <li class="list-group-item">English Essay exam updated</li>
+                    </ul>
+                    <a href="{{ url_for('activity_log') }}" class="btn btn-outline-info btn-block mt-3">View Full Activity Log</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0"><i class="fas fa-bullhorn mr-2"></i>Announcements</h5>
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="announcement">New Announcement</label>
+                            <textarea class="form-control" id="announcement" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Post Announcement</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    var ctx = document.getElementById('examStatsChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Math', 'Science', 'English', 'History', 'Art'],
+            datasets: [{
+                data: [30, 25, 20, 15, 10],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

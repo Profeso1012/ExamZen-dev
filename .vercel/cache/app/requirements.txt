@@ -1,0 +1,12 @@
+Flask==2.2.2
+flask_sqlalchemy==2.5.1
+psycopg2-binary==2.9.3
+bcrypt==3.2.0
+Flask-WTF==1.0.0
+Pillow==9.0.1
+Flask-Login==0.6.1
+flask_bcrypt==1.0.1
+python-dotenv==1.0.1
+email_validator==2.2.0
+gunicorn==20.1.0
+Werkzeug==2.2.2

@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="animate__animated animate__fadeIn">
+        <div class="card">
+            <div class="card-header">
+                <h2>About Us <i class="fas fa-info-circle"></i></h2>
+            </div>
+            <div class="card-body">
+                <p class="animate__animated animate__slideInLeft">Welcome to ExamZen, your ultimate exam companion!</p>
+                <p class="animate__animated animate__slideInRight">This is a simple Flask app designed to make online exams fun and interactive.</p>
+                <div class="row">
+                    <div class="col-md-6 animate__animated animate__zoomIn">
+                        <h3>Our Mission</h3>
+                        <p>To provide a seamless and enjoyable exam experience for students and examiners alike.</p>
+                    </div>
+                    <div class="col-md-6 animate__animated animate__zoomIn">
+                        <h3>Our Vision</h3>
+                        <p>To revolutionize the way we learn and take exams, making it more accessible and fun for everyone.</p>
+                    </div>
+                </div>
+                <a href="http://twopsydz.tech" class="btn btn-primary animate__animated animate__bounce" target="_blank">
+                    <i class="fas fa-rocket"></i> Visit Our Website
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
