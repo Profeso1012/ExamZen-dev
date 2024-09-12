@@ -157,5 +157,5 @@ class Answer(db.Model):
 
 # Create tables (drop existing ones first)
 with app.app_context():
-    db.drop_all()  # Temporarily drop all tables
+    #db.drop_all() Temporarily drop all tables
     db.create_all()  # Recreate tables
