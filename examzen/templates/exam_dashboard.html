@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+
+{% block title %}Exam Dashboard - ExamZen{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <h2 class="mb-4"><i class="fas fa-tachometer-alt"></i> Exam Dashboard</h2>
+
+    {% if current_user.status == 'Examiner' %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0"><i class="fas fa-clipboard-list"></i> Your Created Exams</h3>
+        </div>
+        <div class="card-body">
+            {% if user_exams %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Exam Name</th>
+                            <th>Date</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exam in user_exams %}
+                        <tr>
+                            <td>{{ exam.name }}</td>
+                            <td>{{ exam.exam_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ exam.duration }} minutes</td>
+                            <td>
+                                <a href="{{ url_for('view_exam', exam_id=exam.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="{{ url_for('update_exam', exam_id=exam.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{{ url_for('delete_exam', exam_id=exam.id) }}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>You haven't created any exams yet.</p>
+            {% endif %}
+            <a href="{{ url_for('create_exam') }}" class="btn btn-success mt-3">
+                <i class="fas fa-plus"></i> Create New Exam
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h3 class="mb-0"><i class="fas fa-user-graduate"></i> Your Registered Exams</h3>
+        </div>
+        <div class="card-body">
+            {% if registered_exams %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Exam Name</th>
+                            <th>Date</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exam in registered_exams %}
+                        <tr>
+                            <td>{{ exam.name }}</td>
+                            <td>{{ exam.exam_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ exam.duration }} minutes</td>
+                            <td>
+                                {% if exam.exam_date > now() %}
+                                <span class="badge badge-primary">Upcoming</span>
+                                {% elif exam.exam_date <= now() and exam.exam_date + timedelta(minutes=exam.duration) > now() %}
+                                <span class="badge badge-success">In Progress</span>
+                                {% else %}
+                                <span class="badge badge-secondary">Completed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>You are not registered for any exams.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

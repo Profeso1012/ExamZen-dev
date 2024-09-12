@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamZen - Revolutionize Your Exam Experience!</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary: #4a90e2;
+            --secondary: #f39c12;
+            --accent: #e74c3c;
+            --background: #f4f4f4;
+            --text: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 20px;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .splash {
+            background: url('/api/placeholder/1200/600') no-repeat center center/cover;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        .splash::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        .splash-content {
+            position: relative;
+            z-index: 2;
+            padding: 0 20px;
+        }
+
+        .splash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .splash-overlay:hover {
+            opacity: 1.2;
+        }
+
+        .overlay-title {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .overlay-logos {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .overlay-logo {
+            width: 100px;
+            height: 100px;
+            margin: 0.5rem;
+        }
+
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounceIn 1s;
+        }
+
+        .tagline {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 1s 0.5s both;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: var(--accent);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: pulse 2s infinite;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .features {
+            padding: 4rem 0;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            transition: transform 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .feature-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .carousel {
+            background-color: var(--primary);
+            color: white;
+            padding: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .carousel-content {
+            display: flex;
+            transition: transform 0.5s ease;
+        }
+
+        .carousel-item {
+            flex: 0 0 100%;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        .carousel-item h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            margin: 0 5px;
+            cursor: pointer;
+        }
+
+        .dot.active {
+            background-color: white;
+        }
+
+        .about {
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .creator-img {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            margin-bottom: 2rem;
+            animation: zoomIn 1s;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .social-link {
+            text-decoration: underline;
+            color: #4a90e2;
+            padding: 8px 12px;
+            border: 1px solid #4a90e2;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            display: inline-block;
+        }
+
+        .social-link:hover {
+            background-color: #e74c3c;
+        }
+
+        footer {
+            background-color: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.1); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Responsive styles */
+        @media screen and (max-width: 768px) {
+            h1 {
+                font-size: 3rem;
+            }
+
+            .tagline {
+                font-size: 1.2rem;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .carousel-item h3 {
+                font-size: 1.5rem;
+            }
+
+            .overlay-title {
+                font-size: 1.5rem;
+            }
+
+            .overlay-logo {
+                width: 80px;
+                height: 80px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+            }
+
+            .cta-button {
+                padding: 0.5rem 1rem;
+            }
+
+            .feature-card {
+                padding: 1.5rem;
+            }
+
+            .carousel-item {
+                padding: 0 1rem;
+            }
+
+            .overlay-logo {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">ExamZen</div>
+            <ul>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="splash">
+        <div class="splash-content">
+            <h1>ExamZen</h1>
+            <p class="tagline">Zen Out With Secure Online Exams!</p>
+            <p class="lead">Experience the future of online exams with ExamZen. Our platform offers a secure and hassle-free way to create, take, and manage exams.</p>
+            <a href="#" class="cta-button">Launch ExamZen App</a>
+        </div>
+
+        <div class="splash-overlay">
+            <h2 class="overlay-title">Trusted by Educators Worldwide</h2>
+            <div class="overlay-logos">
+                <img src="https://img.icons8.com/color/48/000000/graduation-cap.png" alt="Graduation Cap Logo" class="overlay-logo">
+                <img src="https://img.icons8.com/color/48/000000/open-book.png" alt="Book Logo" class="overlay-logo">
+                <img src="https://img.icons8.com/color/48/000000/checkmark.png" alt="Tick Logo" class="overlay-logo">
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <img src="exzn-0.png" alt="Mobile-First Approach" class="feature-img">
+                    <h3>Easy-Web Approach</h3>
+                    <p>Access exams anytime, anywhere with our user-friendly web app.</p>
+                </div>
+                <div class="feature-card">
+                    <img src="exzn-2.png" alt="Secure Proctoring" class="feature-img">
+                    <h3>Secure Proctoring</h3>
+                    <p>Real-time monitoring and invigilation to ensure exam integrity.</p>
+                </div>
+                <div class="feature-card">
+                    <img src="exzn-1.png" alt="Detailed Analytics" class="feature-img">
+                    <h3>Detailed Analytics</h3>
+                    <p>Track progress and identify areas for improvement with comprehensive reports.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="carousel">
+        <div class="container">
+            <div class="carousel-content">
+                <div class="carousel-item">
+                    <h3>Create Exams Easily</h3>
+                    <p>Design and set up exams with our intuitive interface in minutes.</p>
+                </div>
+                <div class="carousel-item">
+                    <h3>Real-Time Monitoring</h3>
+                    <p>Keep track of exam progress and ensure a fair testing environment.</p>
+                </div>
+                <div class="carousel-item">
+                    <h3>Instant Results</h3>
+                    <p>Get immediate feedback and scores upon exam completion.</p>
+                </div>
+            </div>
+            <div class="carousel-dots"></div>
+        </div>
+    </section>
+
+    <section id="about" class="about">
+        <div class="container">
+            <img src="IMG_7179.jpg" alt="Orngu Oluwaseyi Emmanuel" class="creator-img">
+            <h2>About ExamZen</h2>
+            <p>ExamZen was inspired by the challenges faced by small organizations in conducting online exams. As a passionate software developer and educator, I, Orngu Oluwaseyi Emmanuel, created ExamZen to address these issues. This project is part of my Portfolio Project for Holberton School, developed over a short timeline to showcase innovative solutions in the edutech space.</p>
+            <p>Connect with me:</p>
+            <ul>
+                <li><a href="https://www.linkedin.com/in/oluwaseyi-orngu-699840289?trk=contact-info" class="social-link">LinkedIn</a></li>
+                <li><a href="https://github.com/Profeso1012" class="social-link">GitHub</a></li>
+                <li><a href="https://x.com/OluwaseyiO55725" class="social-link">Twitter</a></li>
+            </ul>
+
+            <p>Check out the <a href="https://github.com/your-username/examzen" class="social-link">ExamZen GitHub Repository</a></p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 ExamZen. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const carousel = document.querySelector('.carousel-content');
+            const items = carousel.querySelectorAll('.carousel-item');
+            const dotsContainer = document.querySelector('.carousel-dots');
+            let currentIndex = 0;
+
+            // Create dots
+            items.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.classList.add('dot');
+                if (index === 0) dot.classList.add('active');
+                dot.addEventListener('click', () => goToSlide(index));
+                dotsContainer.appendChild(dot);
+            });
+
+            function goToSlide(index) {
+                currentIndex = index;
+                carousel.style.transform = `translateX(-${currentIndex * 100}%)`;
+                updateDots();
+            }
+
+            function updateDots() {
+                dotsContainer.querySelectorAll('.dot').forEach((dot, index) => {
+                    dot.classList.toggle('active', index === currentIndex);
+                });
+            }
+
+            function showNext() {
+                currentIndex = (currentIndex + 1) % items.length;
+                goToSlide(currentIndex);
+            }
+
+            setInterval(showNext, 6000);
+        });
+
+        // Add smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add animation to feature cards on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = 1;
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = 0;
+            card.style.transform = 'translateY(20px)';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

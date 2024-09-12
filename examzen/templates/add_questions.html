@@ -1,0 +1,88 @@
+{% extends "layout.html" %}
+
+{% block title %}Add Questions - ExamZen{% endblock %}
+
+{% block content %}
+<div class="card animate__animated animate__fadeIn">
+    <div class="card-header bg-primary text-white">
+        <h2 class="mb-0"><i class="fas fa-question-circle"></i> Add Questions for {{ exam.name }}</h2>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('add_questions', exam_id=exam.id) }}" method="post">
+            <div class="form-group">
+                <label for="questionText">Question Text</label>
+                <textarea class="form-control" id="questionText" name="question_text" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="questionNumber">Question Number</label>
+                <input type="number" class="form-control" id="questionNumber" name="question_number" value="{{ exam.questions|length + 1 }}" readonly>
+            </div>
+            <div id="optionsContainer">
+                {% for i in range(exam.num_options) %}
+                <div class="form-group">
+                    <label for="option{{ i }}">Option {{ chr(65 + i) }}</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="option{{ i }}" name="option_text[]" required>
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <input type="radio" name="correct_option" value="{{ i }}" required>
+                                <label class="mb-0 ml-2">Correct</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-save"></i> Save Question
+            </button>
+        </form>
+    </div>
+    <div class="card-footer text-muted">
+        Question {{ exam.questions|length + 1 }} of {{ exam.num_questions }}
+    </div>
+</div>
+
+<div class="progress-container mt-4 animate__animated animate__fadeIn">
+    <div class="progress-text">
+        Progress: {{ exam.questions|length }} / {{ exam.num_questions }} Questions
+    </div>
+    <div class="progress-circles">
+        {% for i in range(exam.num_questions) %}
+            {% if i < exam.questions|length %}
+                <span class="circle completed"></span>
+            {% else %}
+                <span class="circle"></span>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .progress-container {
+        text-align: center;
+    }
+    .progress-text {
+        font-size: 1.2em;
+        margin-bottom: 10px;
+    }
+    .progress-circles {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .circle {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background-color: #e0e0e0;
+        margin: 0 5px;
+        display: inline-block;
+    }
+    .circle.completed {
+        background-color: #28a745;
+    }
+</style>
+{% endblock %}

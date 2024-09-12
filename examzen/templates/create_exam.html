@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+
+{% block title %}Create Exam{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2>Create a New Exam</h2>
+  <form action="{{ url_for('create_exam') }}" method="post">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      <label for="examName">Exam Name</label>
+      {{ form.name(class="form-control", id="examName", placeholder="Enter exam name") }}
+    </div>
+    <div class="form-group">
+      <label for="numQuestions">Number of Questions (max 10)</label>
+      {{ form.num_questions(class="form-control", id="numQuestions", placeholder="Enter number of questions") }}
+    </div>
+    <div class="form-group">
+      <label for="numOptions">Number of Options per Question</label>
+      {{ form.num_options(class="form-control", id="numOptions", placeholder="Enter number of options per question") }}
+    </div>
+    <div class="form-group">
+      <label for="numStudents">Number of Students (max 15)</label>
+      {{ form.num_students(class="form-control", id="numStudents", placeholder="Enter number of students") }}
+    </div>
+    <div class="form-group">
+      <label for="examDate">Exam Date (YYYY-MM-DD)</label>
+      {{ form.exam_date(class="form-control", id="examDate") }}
+    </div>
+    <div class="form-group">
+      <label for="examTime">Exam Time (HH:MM)</label>
+      {{ form.exam_time(class="form-control", id="examTime") }}
+    </div>
+    <div class="form-group">
+      <label for="duration">Duration (minutes, max 30)</label>
+      {{ form.duration(class="form-control", id="duration", placeholder="Enter exam duration") }}
+    </div>
+    <div class="form-group">
+      <label for="is_private">Private Exam</label>
+      <div class="form-check">
+        {{ form.is_private(type="checkbox", id="is_private") }}
+        <label class="form-check-label" for="is_private">Make this exam accessible only to selected students</label>
+      </div>
+    </div>
+    <div class="form-group" id="student_selection">
+      <label for="student_usernames">Select Students</label>
+      {{ form.student_usernames(class="form-control", id="student_usernames", multiple=True) }}
+      <p class="text-muted">Select the students who can take this exam. (Optional for public exams)</p>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Exam</button>
+  </form>
+</div>
+
+<script>
+  // Add JavaScript to toggle student selection visibility based on is_private checkbox
+  const isPrivateCheckbox = document.getElementById('is_private');
+  const studentSelection = document.getElementById('student_selection');
+
+  isPrivateCheckbox.addEventListener('change', () => {
+    studentSelection.style.display = isPrivateCheckbox.checked ? 'block' : 'none';
+  });
+
+  // Set initial visibility based on checkbox state on page load
+  studentSelection.style.display = isPrivateCheckbox.checked ? 'block' : 'none';
+</script>
+
+{% endblock %}
