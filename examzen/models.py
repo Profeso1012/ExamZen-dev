@@ -4,7 +4,7 @@ from flask_login import UserMixin
 from sqlalchemy.dialects.postgresql import ENUM
 
 # Enum for User status
-status_enum = ENUM('Student', 'Examiner', 'Organization', name='status_enum')
+status_enum = ENUM('Student', 'Examiner', 'Organization', name='status_enum', schema='public')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -18,7 +18,8 @@ class User(db.Model, UserMixin):
     age = db.Column(db.Integer, nullable=False)
     status = db.Column(status_enum, nullable=False)  # Named ENUM for PostgreSQL
     password = db.Column(db.String(255), nullable=False)
-    profile_pic = db.Column(db.String(20), nullable=False, default='default.jpg')
+    profile_pic = db.Column(db.LargeBinary, nullable=True)  # Store image as binary data
+    profile_pic_mimetype = db.Column(db.String(50), nullable=True)  # Store image MIME type
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     # Relationships

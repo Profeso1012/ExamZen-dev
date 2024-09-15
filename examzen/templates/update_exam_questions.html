@@ -1,0 +1,122 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1 class="animate__animated animate__fadeInDown">Update Exam Questions: {{ exam.name }}</h1>
+  <div id="questions-container">
+    {% for i in range(exam.num_questions) %}
+    <div class="question card mb-3 animate__animated animate__fadeInUp" data-question-id="{{ questions[i].id if i < questions|length else '' }}">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">Question {{ i+1 }}</h3>
+        <button type="button" class="btn btn-danger btn-sm delete-question">Delete Question</button>
+      </div>
+      <div class="card-body">
+        <textarea class="question-text form-control animate__animated animate__fadeIn" rows="3" required>{{ questions[i].question_text if i < questions|length else '' }}</textarea>
+        <div class="options-container">
+          {% for j in range(exam.num_options) %}
+          <div class="option mb-2">
+            <input type="text" class="option-text form-control animate__animated animate__fadeIn" value="{{ questions[i].options[j].option_text if i < questions|length and j < questions[i].options|length else '' }}" required>
+            <label>
+              <input type="checkbox" class="is-correct" {% if i < questions|length and j < questions[i].options|length and questions[i].options[j].is_correct %}checked{% endif %}> Is Correct
+            </label>
+            <button type="button" class="btn btn-danger btn-sm delete-option">Delete Option</button>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm mt-2 add-option">Add Option</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  
+  <button type="button" id="add-question" class="btn btn-secondary mt-3">Add Question</button>
+  <button type="button" id="save-questions" class="btn btn-primary animate__animated animate__fadeIn">Save Questions</button>
+
+  <script>
+    $(document).ready(function() {
+
+      // Add new question dynamically
+      $('#add-question').on('click', function() {
+          var questionTemplate = `
+              <div class="question card mb-3">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                      <h3 class="card-title">New Question</h3>
+                      <button type="button" class="btn btn-danger btn-sm delete-question">Delete Question</button>
+                  </div>
+                  <div class="card-body">
+                      <textarea class="question-text form-control" rows="3" required></textarea>
+                      <div class="options-container"></div>
+                      <button type="button" class="btn btn-secondary btn-sm mt-2 add-option">Add Option</button>
+                  </div>
+              </div>`;
+          $('#questions-container').append(questionTemplate);
+      });
+
+      // Add options dynamically to a question
+      $(document).on('click', '.add-option', function() {
+          var optionTemplate = `
+              <div class="option mb-2">
+                  <input type="text" class="option-text form-control" required>
+                  <label>
+                      <input type="checkbox" class="is-correct"> Is Correct
+                  </label>
+                  <button type="button" class="btn btn-danger btn-sm delete-option">Delete Option</button>
+              </div>`;
+          $(this).closest('.card-body').find('.options-container').append(optionTemplate);
+      });
+
+      // Delete a question
+      $(document).on('click', '.delete-question', function() {
+          $(this).closest('.question').remove();
+      });
+
+      // Delete an option
+      $(document).on('click', '.delete-option', function() {
+          $(this).closest('.option').remove();
+      });
+
+      // Save questions to server
+      $('#save-questions').on('click', function() {
+          var questions = [];
+          $('.question').each(function() {
+              var question = {
+                  question_text: $(this).find('.question-text').val(),
+                  options: []
+              };
+
+              $(this).find('.option').each(function() {
+                  question.options.push({
+                      option_text: $(this).find('.option-text').val(),
+                      is_correct: $(this).find('.is-correct').is(':checked')
+                  });
+              });
+
+              questions.push(question);
+          });
+
+          // Validate question and options count before sending data
+          if (questions.length !== {{ exam.num_questions }}) {
+              alert('Number of questions must match the exam settings!');
+              return;
+          }
+
+          $.ajax({
+              url: '/update_exam_questions/{{ exam.id }}',
+              method: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({ questions: questions }),
+              success: function(response) {
+                  alert(response.message);
+                  window.location.href = '/exam_dashboard';
+              },
+              error: function(xhr) {
+                  alert(xhr.responseJSON.error);
+              }
+          });
+      });
+
+    });
+  </script>
+
+</div>
+{% endblock %}
