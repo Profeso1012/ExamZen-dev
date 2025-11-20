@@ -19,7 +19,7 @@ class User(db.Model, UserMixin):
     status = db.Column(status_enum, nullable=False)  # Named ENUM for PostgreSQL
     password = db.Column(db.String(255), nullable=False)
     profile_pic = db.Column(db.LargeBinary, nullable=True)  # Store image as binary data
-    profile_pic_mimetype = db.Column(db.String(50), nullable=True)  # Store image MIME type
+    profile_pic_mimetype = db.Column(db.String(50), default='image/jpeg')  # Store image MIME type
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     # Relationships

@@ -3,7 +3,7 @@ import secrets
 import uuid
 from PIL import Image
 from datetime import datetime
-from flask import render_template, url_for, flash, redirect, request, jsonify
+from flask import render_template, url_for, flash, redirect, request, jsonify, abort
 from examzen import app, db, bcrypt
 from examzen.forms import RegistrationForm, LoginForm, UpdateAccountForm, ExamForm, OrganizationRegistrationForm
 from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer
@@ -111,27 +111,32 @@ def logout():
 
 
 def save_picture(form_picture):
-    random_hex = secrets.token_hex(5)
-    _, f_ext = os.path.splitext(form_picture.filename)
-    picture_fn = random_hex + f_ext
-    picture_path = os.path.join(app.root_path, 'static/profile_pics', picture_fn)
-
     output_size = (125, 125)
     i = Image.open(form_picture)
     i.thumbnail(output_size)
-    i.save(picture_path)
-
-    return picture_fn
+    
+    # Get the MIME type
+    mimetype = form_picture.content_type or 'image/jpeg'
+    
+    # Convert image to binary
+    import io
+    img_io = io.BytesIO()
+    i.save(img_io, format='JPEG')
+    img_io.seek(0)
+    
+    return img_io.getvalue(), 'image/jpeg'
 
 
 @app.route("/profile", methods=['GET', 'POST'])
 @login_required
 def profile():
+    import base64
     forms = UpdateAccountForm()
     if forms.validate_on_submit():
         if forms.picture.data:
-            picture_file = save_picture(forms.picture.data)
-            current_user.profile_pic = picture_file
+            picture_data, mimetype = save_picture(forms.picture.data)
+            current_user.profile_pic = picture_data
+            current_user.profile_pic_mimetype = mimetype
         current_user.username = forms.username.data
         current_user.email = forms.email.data
         db.session.commit()
@@ -140,7 +145,28 @@ def profile():
     elif request.method == 'GET':
         forms.username.data = current_user.username
         forms.email.data = current_user.email
-    img_file = url_for('static', filename='profile_pics/' + current_user.profile_pic)
+    
+    # Convert binary image to base64 data URI for display
+    if current_user.profile_pic:
+        pic_data = current_user.profile_pic
+        # Handle memoryview from database
+        if isinstance(pic_data, memoryview):
+            pic_data = bytes(pic_data)
+        
+        mimetype = current_user.profile_pic_mimetype or 'image/jpeg'
+        b64_pic = base64.b64encode(pic_data).decode('utf-8')
+        img_file = f"data:{mimetype};base64,{b64_pic}"
+    else:
+        # Use default profile picture
+        default_pic_path = os.path.join(app.root_path, 'static/profile_pics/default.jpg')
+        if os.path.exists(default_pic_path):
+            with open(default_pic_path, 'rb') as f:
+                pic_data = f.read()
+                b64_pic = base64.b64encode(pic_data).decode('utf-8')
+                img_file = f"data:image/jpeg;base64,{b64_pic}"
+        else:
+            img_file = url_for('static', filename='profile_pics/default.jpg')
+    
     return render_template('profile.html', title='Profile',
                             img_file=img_file, form=forms)
 
@@ -322,18 +348,36 @@ def delete_exam(exam_id):
 def take_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
     questions = Question.query.filter_by(exam_id=exam_id).order_by(Question.question_number).all()
+    # Build a JSON-serializable representation of questions for the frontend
+    questions_json = []
+    for q in questions:
+        qdict = {
+            'id': q.id,
+            'question_number': q.question_number,
+            'question_text': q.question_text,
+            'options': []
+        }
+        for opt in q.options:
+            qdict['options'].append({
+                'id': opt.id,
+                'option_text': opt.option_text,
+                'option_letter': getattr(opt, 'option_letter', None)
+            })
+        questions_json.append(qdict)
     if request.method == 'POST':
         for question in questions:
             answer = request.form.get(f'question_{question.id}')
             correct_answer = next((option.option_text for option in question.options if option.is_correct), None)
-            new_answer = Answer(
-                exam_id=exam.id,
-                question_id=question.id,
-                user_id=current_user.id,
-                answer=answer,
-                is_correct=(answer == correct_answer)
-            )
-            db.session.add(new_answer)
+            # Only save answer if user provided one
+            if answer:
+                new_answer = Answer(
+                    exam_id=exam.id,
+                    question_id=question.id,
+                    user_id=current_user.id,
+                    answer=answer,
+                    is_correct=(answer == correct_answer)
+                )
+                db.session.add(new_answer)
         db.session.commit()
         # Delete the exam code
         ExamCode.query.filter_by(exam_id=exam_id, user_id=current_user.id).delete()
@@ -342,7 +386,7 @@ def take_exam(exam_id):
         db.session.commit()
         flash('Exam submitted successfully!', 'success')
         return redirect(url_for('home'))
-    return render_template('take_exam.html', exam=exam, questions=questions)
+    return render_template('take_exam.html', exam=exam, questions=questions, questions_json=questions_json)
 
 @app.route("/submit_exam/<int:exam_id>", methods=['POST'])
 @login_required
@@ -387,23 +431,44 @@ def view_exam_results(exam_id):
     # Get the student's answers for this exam
     answers = Answer.query.filter_by(exam_id=exam_id, user_id=current_user.id).all()
 
-    # Ensure we have the same number of questions and answers
-    if len(questions) != len(answers):
-        flash('There was an issue retrieving your exam results. Please contact support.', 'danger')
-        return redirect(url_for('submit_complaint'))
+    # If no answers found, redirect to home
+    if not answers:
+        flash('You have not taken this exam yet.', 'info')
+        return redirect(url_for('home'))
 
-    # Calculate score
-    total_questions = len(questions)
+    # Create a dictionary of answers by question_id for easier lookup
+    answers_dict = {answer.question_id: answer for answer in answers}
+
+    # Calculate score based on submitted answers only
     correct_answers = sum(1 for answer in answers if answer.is_correct)
-    score = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
+    total_answers = len(answers)
+    score = (correct_answers / total_answers) * 100 if total_answers > 0 else 0
 
     # Prepare data for the chart
-    score_data = [correct_answers, total_questions - correct_answers]
+    score_data = [correct_answers, total_answers - correct_answers]
 
-    # Get correct options for each question
-    correct_options = {q.id: qo.option_text for q, qo in db.session.query(Question, Examoption).filter(
-        Question.id == Examoption.question_id, Examoption.is_correct == True
-    ).all()}
+    # Get correct options for each question that was answered
+    correct_options = {}
+    for question in questions:
+        if question.id in answers_dict:
+            correct_option = Examoption.query.filter_by(
+                question_id=question.id, 
+                is_correct=True
+            ).first()
+            if correct_option:
+                correct_options[question.id] = correct_option.option_text
+
+    # Zip answered questions and answers for easy iteration in the template
+    answered_questions = [q for q in questions if q.id in answers_dict]
+    question_answers = list(zip(answered_questions, [answers_dict[q.id] for q in answered_questions]))
+
+    return render_template('view_exam_results.html',
+                           title='Exam Results',
+                           exam=exam,
+                           question_answers=question_answers,
+                           score=score,
+                           score_data=score_data,
+                           correct_options=correct_options)
 
     # Zip questions and answers for easy iteration in the template
     question_answers = list(zip(questions, answers))

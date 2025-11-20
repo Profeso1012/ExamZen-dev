@@ -1,39 +1,51 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <div class="card mb-4">
   <div class="card-header bg-success text-white">
     <h5 class="card-title mb-0"><i class="fas fa-clipboard-check mr-2"></i>Exam Results - {{ exam.name }}</h5>
   </div>
   <div class="card-body">
-    <h2>Score: {{ score|round(2) }}%</h2>
-    <canvas id="score-chart" width="400" height="400"></canvas>
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <h2>Score: <span style="color: #5cb85c; font-weight: bold;">{{ score|round(2) }}%</span></h2>
+      </div>
+      <div class="col-md-6">
+        <canvas id="score-chart" width="200" height="200"></canvas>
+      </div>
+    </div>
     <script>
-      const ctx = document.getElementById('score-chart').getContext('2d');
-      const chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Correct', 'Incorrect'],
-          datasets: [{
-            label: 'Score',
-            data: {{ score_data }},
-            backgroundColor: [
-              'rgba(54, 162, 235, 0.2)',
-              'rgba(255, 99, 132, 0.2)'
-            ],
-            borderColor: [
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 99, 132, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          title: {
-            display: true,
-            text: 'Score Distribution'
+      document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('score-chart').getContext('2d');
+        const chart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Correct', 'Incorrect'],
+            datasets: [{
+              label: 'Score',
+              data: {{ score_data|tojson }},
+              backgroundColor: [
+                'rgba(76, 175, 80, 0.7)',
+                'rgba(244, 67, 54, 0.7)'
+              ],
+              borderColor: [
+                'rgba(76, 175, 80, 1)',
+                'rgba(244, 67, 54, 1)'
+              ],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              }
+            }
           }
-        }
+        });
       });
     </script>
     <div class="table-responsive">

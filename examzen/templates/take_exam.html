@@ -1,24 +1,273 @@
 {% extends "layout.html" %}
 {% block content %}
-    <div class="container mt-4">
-        <h1 class="mb-4">Take Exam: {{ exam.name }}</h1>
-        <form method="POST">
-            {% for question in questions %}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        Question {{ question.question_number }}: {{ question.question_text }}
-                    </div>
-                    <div class="card-body">
-                        {% for option in question.options %}
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="option_{{ option.id }}" value="{{ option.option_text }}">
-                                <label class="form-check-label" for="option_{{ option.id }}">{{ option.option_text }}</label>
-                            </div>
-                        {% endfor %}
-                    </div>
+<style>
+    .fixed-timer-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: transparent; /* transparent so only pill shows */
+        padding: 0;
+        z-index: 2000; /* sit above navbar */
+        pointer-events: none; /* allow clicks to pass through except pill */
+    }
+
+    body {
+        padding-top: 70px; /* leave space for navbar and pill */
+    }
+
+    .timer-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        pointer-events: auto; /* allow interactions */
+    }
+
+    .timer-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        padding: 6px 12px;
+        border-radius: 24px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        pointer-events: auto;
+    }
+
+    #timer {
+        font-size: 16px;
+        font-weight: 700;
+        color: #5cb85c;
+        margin: 0;
+    }
+
+    .pagination-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+    }
+
+    .question-tracker {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+    }
+
+    .question-btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 50%;
+        border: 2px solid #ddd;
+        background: white;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+
+    .question-btn:hover {
+        background: #f0f0f0;
+    }
+
+    .question-btn.answered {
+        background: #5cb85c;
+        color: white;
+        border-color: #5cb85c;
+    }
+
+    .question-btn.active {
+        background: #0275d8;
+        color: white;
+        border-color: #0275d8;
+    }
+
+    .container-exam {
+        margin-top: 20px;
+    }
+</style>
+
+<!-- Fixed Timer Header -->
+<div class="fixed-timer-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <h5 class="mb-0">{{ exam.name }}</h5>
+            </div>
+            <div class="col-md-4 timer-container">
+                <div class="timer-pill">
+                    <span style="font-size:14px; color:#333;">⏱</span>
+                    <div style="font-size:12px; color:#333;">Time</div>
+                    <div id="timer">{{ exam.duration }}:00</div>
                 </div>
-            {% endfor %}
-            <button type="submit" class="btn btn-primary">Submit Exam</button>
-        </form>
+            </div>
+            <div class="col-md-4 text-right">
+                <small id="progress-text" style="color: #666;"></small>
+            </div>
+        </div>
     </div>
+</div>
+
+<div class="container container-exam">
+    <form method="POST" id="examForm">
+        <!-- Question Tracker -->
+        <div class="question-tracker" id="questionTracker"></div>
+
+        <!-- Questions Container -->
+        <div id="questionsContainer"></div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-nav">
+            <button type="button" class="btn btn-secondary" id="prevBtn" disabled>← Previous</button>
+            <span id="pageInfo" style="font-weight: bold;">Page 1 of <span id="totalPages">1</span></span>
+            <button type="button" class="btn btn-secondary" id="nextBtn">Next →</button>
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <button type="submit" class="btn btn-primary btn-lg">Submit Exam</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const QUESTIONS_PER_PAGE = 2;
+    const questions = {{ questions_json|tojson }};
+    let currentPage = 1;
+    const totalPages = Math.ceil(questions.length / QUESTIONS_PER_PAGE);
+    let answeredQuestions = new Set();
+    let answerState = {}; // store selections across pagination
+
+    // Initialize question tracker
+    function initializeTracker() {
+        const tracker = document.getElementById('questionTracker');
+        questions.forEach((q, index) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'question-btn';
+            btn.textContent = (index + 1);
+            btn.id = `qBtn_${q.id}`;
+            btn.onclick = () => goToPage(Math.floor(index / QUESTIONS_PER_PAGE) + 1);
+            tracker.appendChild(btn);
+        });
+    }
+
+    // Display questions for current page
+    function displayPage(page) {
+        currentPage = page;
+        const container = document.getElementById('questionsContainer');
+        container.innerHTML = '';
+
+        const startIdx = (page - 1) * QUESTIONS_PER_PAGE;
+        const endIdx = Math.min(startIdx + QUESTIONS_PER_PAGE, questions.length);
+
+        for (let i = startIdx; i < endIdx; i++) {
+            const question = questions[i];
+            const card = document.createElement('div');
+            card.className = 'card mb-4';
+            let optionsHtml = '';
+            question.options.forEach(option => {
+                const checked = (answerState[question.id] === option.option_text) ? 'checked' : '';
+                optionsHtml += `\n                        <div class="form-check">\n                            <input class="form-check-input" type="radio" name="question_${question.id}" id="option_${option.id}" value="${option.option_text}" onchange="recordSelection(${question.id}, this.value)" ${checked}>\n                            <label class="form-check-label" for="option_${option.id}">\n                                ${option.option_text}\n                            </label>\n                        </div>`;
+            });
+            card.innerHTML = `\n                <div class="card-header">\n                    <strong>Question ${question.question_number}:</strong> ${question.question_text}\n                </div>\n                <div class="card-body">\n                    ${optionsHtml}\n                </div>\n            `;
+            container.appendChild(card);
+        }
+
+        // Update button states
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById('progress-text').textContent = `Answered: ${answeredQuestions.size}/${questions.length}`;
+
+        // Update tracker buttons
+        questions.forEach((q, idx) => {
+            const btn = document.getElementById(`qBtn_${q.id}`);
+            btn.classList.remove('active', 'answered');
+            if (idx >= startIdx && idx < endIdx) {
+                btn.classList.add('active');
+            }
+            if (answeredQuestions.has(q.id)) {
+                btn.classList.add('answered');
+            }
+        });
+    }
+
+    function goToPage(page) {
+        if (page >= 1 && page <= totalPages) {
+            displayPage(page);
+        }
+    }
+
+    function markAnswered(questionId) {
+        answeredQuestions.add(questionId);
+        document.getElementById(`qBtn_${questionId}`).classList.add('answered');
+        document.getElementById('progress-text').textContent = `Answered: ${answeredQuestions.size}/${questions.length}`;
+    }
+
+    function recordSelection(questionId, value) {
+        answerState[questionId] = value;
+        markAnswered(questionId);
+    }
+
+    // Timer functionality
+    const durationInMinutes = {{ exam.duration }};
+    let totalSeconds = durationInMinutes * 60;
+    const initialTotalSeconds = totalSeconds;
+    const orangeThreshold = Math.ceil(initialTotalSeconds * 0.30);
+    const redThreshold = Math.ceil(initialTotalSeconds * 0.15); // turn red at 15% left
+
+    function updateTimer() {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const timeString = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        document.getElementById('timer').textContent = timeString;
+
+        if (totalSeconds <= 0) {
+            alert('Time is up! Your exam will be submitted now.');
+            document.getElementById('examForm').submit();
+            return;
+        }
+
+        // color thresholds based on percentage remaining
+        if (totalSeconds <= redThreshold) {
+            document.getElementById('timer').style.color = '#d9534f';
+        } else if (totalSeconds <= orangeThreshold) {
+            document.getElementById('timer').style.color = '#ff9800';
+        } else {
+            document.getElementById('timer').style.color = '#5cb85c';
+        }
+
+        totalSeconds--;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeTracker();
+        displayPage(1);
+        // update total pages display
+        const totalPagesEl = document.getElementById('totalPages');
+        if (totalPagesEl) totalPagesEl.textContent = totalPages;
+        setInterval(updateTimer, 1000);
+
+        document.getElementById('prevBtn').addEventListener('click', () => goToPage(currentPage - 1));
+        document.getElementById('nextBtn').addEventListener('click', () => goToPage(currentPage + 1));
+    });
+
+    // Ensure answers from other pages are submitted: add hidden inputs before submit
+    document.getElementById('examForm').addEventListener('submit', function(e) {
+        // Remove existing hidden helper inputs
+        const existing = document.querySelectorAll('.hidden-answer-input');
+        existing.forEach(n => n.remove());
+
+        for (const qid in answerState) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = `question_${qid}`;
+            input.value = answerState[qid];
+            input.className = 'hidden-answer-input';
+            this.appendChild(input);
+        }
+    });
+</script>
 {% endblock %}
