@@ -8,7 +8,7 @@
 
 ## Features
 
-- **User Accounts**: Users can register, log in, and update their profiles.
+- **User Accounts**: Users can register, log in, and update their user profiles.
 - **Exams**: Create, manage, and take exams online.
 - **Real-time Monitoring**: Admins can monitor exams as they happen.
 - **Anti-cheating Measures**: Track and flag suspicious activity during exams.
