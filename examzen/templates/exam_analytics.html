@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Analytics: <span class="text-primary">{{ exam.name }}</span></h2>
+        <button class="btn btn-secondary" onclick="window.print()"><i class="fas fa-print"></i> Export Report</button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3>{{ results|length }}</h3>
+                    <small>Total Participants</small>
+                </div>
+            </div>
+        </div>
+        <!-- Placeholder for Avg Score -->
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3>--%</h3>
+                    <small>Average Score</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Student Performance</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Date Taken</th>
+                            <th>Score</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if results %}
+                        {% for res in results %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle mr-3"
+                                        style="width:30px;height:30px;background:#eee;border-radius:50%;margin-right:10px;">
+                                    </div>
+                                    <div>
+                                        <strong>{{ res.student.username }}</strong><br>
+                                        <small class="text-muted">{{ res.student.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ res.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <strong>{{ res.score | round(1) }}%</strong>
+                                <small class="text-muted">({{ res.correct }}/{{ res.total }})</small>
+                            </td>
+                            <td>
+                                {% if res.score >= 50 %}
+                                <span class="badge badge-success">Pass</span>
+                                {% else %}
+                                <span class="badge badge-danger">Fail</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4">No submissions yet.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

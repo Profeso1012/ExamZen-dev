@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamZen - Dashboard</title>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles1.css') }}">
+    <style>
+        body {
+            background-color: #f7f9fc;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background-color: #fff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .sidebar-brand {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2D1B69;
+            /* Deep Purple */
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 24px 0;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .menu-item:hover,
+        .menu-item.active {
+            background-color: #f0f4ff;
+            color: #0b66c3;
+            /* Theme Blue */
+            border-left-color: #0b66c3;
+        }
+
+        .menu-item i {
+            width: 24px;
+            margin-right: 12px;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-footer {
+            padding: 24px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .user-profile:hover {
+            background-color: #f5f5f5;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #2D1B69;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .user-info div {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .user-info span {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            /* Match sidebar width */
+            padding: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('home') }}" class="sidebar-brand">
+                    <i class="fas fa-graduation-cap"></i> ExamZen
+                </a>
+            </div>
+
+            <nav class="sidebar-menu">
+                {% if current_user.status == 'Examiner' or current_user.status|string == 'Examiner' %}
+                <a href="{{ url_for('exam_dashboard') }}"
+                    class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <a href="{{ url_for('create_exam') }}"
+                    class="menu-item {% if active_page == 'create_exam' %}active{% endif %}">
+                    <i class="fas fa-plus-circle"></i> Create Exam
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-file-alt"></i> My Exams
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-users"></i> Students
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-chart-bar"></i> Analytics
+                </a>
+                {% else %}
+                <a href="{{ url_for('home') }}" class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-book-open"></i> My Exams
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-history"></i> History
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="{{ url_for('account') }}" class="user-profile">
+                    <div class="user-avatar">
+                        {{ current_user.username[0]|upper }}
+                    </div>
+                    <div class="user-info">
+                        <div>{{ current_user.username }}</div>
+                        <span>{{ current_user.email }}</span>
+                    </div>
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-block btn-outline-danger mt-3 btn-sm">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} animate__animated animate__fadeInDown shadow-sm mb-4">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

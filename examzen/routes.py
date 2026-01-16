@@ -5,16 +5,29 @@ from PIL import Image
 from datetime import datetime
 from flask import render_template, url_for, flash, redirect, request, jsonify, abort
 from examzen import app, db, bcrypt
-from examzen.forms import RegistrationForm, LoginForm, UpdateAccountForm, ExamForm, OrganizationRegistrationForm
-from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer
+from examzen.forms import RegistrationForm, LoginForm, UpdateAccountForm, ExamForm, OrganizationRegistrationForm, ClassForm, ExcelUploadForm
+from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer, Class, Notification
+from examzen.utils import parse_questions_excel, parse_students_excel, send_notification
 from flask_login import login_user, current_user, logout_user, login_required
 
 
-@app.template_filter('strftime')
-def format_datetime(value, format='%Y-%m-%d %H:%M'):
-    if isinstance(value, datetime):
-        return value.strftime(format)
-    return value
+@app.route('/proctor/log', methods=['POST'])
+@login_required
+def proctor_log():
+    data = request.get_json()
+    exam_id = data.get('exam_id')
+    event_type = data.get('type')
+    details = data.get('details', '')
+    
+    # In a real app, append to existing session or create one.
+    # For now, we will just print to console or simplistic logging
+    print(f"PROCTOR ALERT: User {current_user.username} in Exam {exam_id}: {event_type} - {details}")
+    
+    # Logic to fetch or create ProctorSession
+    # session = ProctorSession.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+    # if session: ....
+    
+    return jsonify({'status': 'logged'})
 
 @app.route("/")
 @app.route("/home")
@@ -110,6 +123,12 @@ def logout():
     return redirect(url_for('home'))
 
 
+@app.route("/account")
+@login_required
+def account():
+    return render_template('account.html', title='Account')
+
+
 def save_picture(form_picture):
     output_size = (125, 125)
     i = Image.open(form_picture)
@@ -173,10 +192,7 @@ def profile():
 
 #mostly dummy routes
 
-@app.route("/view_results")
-@login_required
-def view_results():
-    return "Viewing results"
+
 
 @app.route("/submit_complaint", methods=['GET', 'POST'])
 @login_required
@@ -189,44 +205,112 @@ def submit_complaint():
 @login_required
 def create_exam():
     form = ExamForm()
-    # Populate student choices
+    # Populate student choices if no class selected, mostly kept for backwards compat or adhop
     form.student_usernames.choices = [(user.id, user.username) for user in User.query.filter_by(status='Student').all()]
 
     if form.validate_on_submit():
-        exam_datetime = datetime.combine(form.exam_date.data, form.exam_time.data)
-        
         new_exam = Exam(
             name=form.name.data,
             num_questions=form.num_questions.data,
             num_options=form.num_options.data,
             num_students=form.num_students.data,
-            exam_date=exam_datetime,
+            start_time=form.start_time.data, # Strict window
+            end_time=form.end_time.data,
+            exam_date=form.start_time.data.date(), # Fallback for listing
             duration=form.duration.data,
             created_by_id=current_user.id,
             is_private=form.is_private.data
         )
         db.session.add(new_exam)
-        db.session.flush()  # This will populate the id of the new exam
+        db.session.flush()
 
-        # Generate exam codes
-        for _ in range(form.num_students.data):
-            code = str(uuid.uuid4())[:7].upper()
-            exam_code = ExamCode(exam_id=new_exam.id, code=code)
-            db.session.add(exam_code)
-
-        # If it's a private exam, assign codes to selected students
+        # Generate codes if private
         if form.is_private.data:
-            exam_codes = ExamCode.query.filter_by(exam_id=new_exam.id).all()
-            for i, student_id in enumerate(form.student_usernames.data):
-                if i < len(exam_codes):
-                    exam_codes[i].user_id = student_id
+            for _ in range(form.num_students.data):
+                code = str(uuid.uuid4())[:7].upper()
+                exam_code = ExamCode(exam_id=new_exam.id, code=code)
+                db.session.add(exam_code)
 
         db.session.commit()
-
         flash('Exam created successfully! Please add questions.', 'success')
         return redirect(url_for('add_questions', exam_id=new_exam.id))
 
     return render_template('create_exam.html', form=form)
+
+
+@app.route('/import/questions/<int:exam_id>', methods=['GET', 'POST'])
+@login_required
+def import_questions(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    if exam.created_by_id != current_user.id:
+        abort(403)
+        
+    form = ExcelUploadForm()
+    if form.validate_on_submit():
+        if form.file.data:
+            questions_data = parse_questions_excel(form.file.data)
+            count = 0
+            for i, q in enumerate(questions_data):
+                new_q = Question(
+                    exam_id=exam.id,
+                    question_text=q['text'],
+                    question_number=i + 1
+                )
+                db.session.add(new_q)
+                db.session.flush()
+                
+                for opt in q['options']:
+                    new_opt = Examoption(
+                        question_id=new_q.id,
+                        option_text=opt['text'],
+                        option_letter=opt['letter'],
+                        is_correct=opt['is_correct']
+                    )
+                    db.session.add(new_opt)
+                count += 1
+            
+            db.session.commit()
+            flash(f'Successfully imported {count} questions!', 'success')
+            return redirect(url_for('exam_dashboard'))
+            
+    return render_template('import_questions.html', form=form, exam=exam)
+
+
+# Class Management Routes
+@app.route('/classes', methods=['GET', 'POST'])
+@login_required
+def classes():
+    if current_user.status == 'Student':
+        my_classes = current_user.enrolled_classes.all()
+        return render_template('classes_student.html', classes=my_classes)
+    else:
+        # Teacher
+        form = ClassForm()
+        if form.validate_on_submit():
+            new_class = Class(
+                name=form.name.data,
+                code=form.code.data,
+                created_by_id=current_user.id
+            )
+            new_class.teachers.append(current_user)
+            db.session.add(new_class)
+            db.session.commit()
+            flash('Class created successfully!', 'success')
+            return redirect(url_for('classes'))
+            
+        my_classes = current_user.teaching_classes.all()
+        return render_template('classes_teacher.html', classes=my_classes, form=form)
+
+@app.route('/class/<int:class_id>', methods=['GET'])
+@login_required
+def view_class(class_id):
+    classroom = Class.query.get_or_404(class_id)
+    # Check access
+    if current_user not in classroom.teachers and current_user not in classroom.students:
+        abort(403)
+        
+    return render_template('view_class.html', classroom=classroom)
+
 
 
 @app.route('/add_questions/<int:exam_id>', methods=['GET', 'POST'])
@@ -341,14 +425,68 @@ def delete_exam(exam_id):
         return redirect(url_for('exam_dashboard'))
     return render_template('delete_exam.html', exam=exam)
 
+# Results & Analytics Routes
+
+@app.route('/exam/results/<int:exam_id>', methods=['GET'])
+@login_required
+def view_results(exam_id):
+    # Student specific result view
+    exam = Exam.query.get_or_404(exam_id)
+    taken_exam = TakenExam.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+    
+    if not taken_exam:
+        flash('You have not taken this exam yet.', 'warning')
+        return redirect(url_for('take_exam', exam_id=exam_id))
+        
+    # Calculate score
+    total_questions = len(exam.questions)
+    correct_answers = Answer.query.filter_by(user_id=current_user.id, exam_id=exam_id, is_correct=True).count()
+    score = (correct_answers / total_questions * 100) if total_questions > 0 else 0
+    
+    return render_template('view_results.html', exam=exam, score=score, correct=correct_answers, total=total_questions)
+
+@app.route('/exam/analytics/<int:exam_id>', methods=['GET'])
+@login_required
+def exam_analytics(exam_id):
+    # Teacher view of all students
+    exam = Exam.query.get_or_404(exam_id)
+    if exam.created_by_id != current_user.id:
+        abort(403)
+        
+    taken_exams = TakenExam.query.filter_by(exam_id=exam_id).all()
+    
+    results = []
+    for taken in taken_exams:
+        user = User.query.get(taken.user_id)
+        correct_count = Answer.query.filter_by(user_id=taken.user_id, exam_id=exam_id, is_correct=True).count()
+        total_q = len(exam.questions)
+        score_pct = (correct_count / total_q * 100) if total_q > 0 else 0
+        
+        results.append({
+            'student': user,
+            'score': score_pct,
+            'correct': correct_count,
+            'total': total_q,
+            'date': taken.taken_at
+        })
+        
+    return render_template('exam_analytics.html', exam=exam, results=results)
+
+
 
 #Student routes
-@app.route("/take_exam/<int:exam_id>", methods=['GET', 'POST'])
+@app.route("/take_exam/<int:exam_id>", methods=['GET'])
 @login_required
 def take_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
+    # Check if already taken?
+    existing = TakenExam.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+    if existing:
+        flash('You have already taken this exam.', 'info')
+        return redirect(url_for('view_results', exam_id=exam_id)) # Assuming view_results exists or needs creation
+
     questions = Question.query.filter_by(exam_id=exam_id).order_by(Question.question_number).all()
-    # Build a JSON-serializable representation of questions for the frontend
+    
     questions_json = []
     for q in questions:
         qdict = {
@@ -361,31 +499,9 @@ def take_exam(exam_id):
             qdict['options'].append({
                 'id': opt.id,
                 'option_text': opt.option_text,
-                'option_letter': getattr(opt, 'option_letter', None)
+                'option_letter': getattr(opt, 'option_letter', '')
             })
         questions_json.append(qdict)
-    if request.method == 'POST':
-        for question in questions:
-            answer = request.form.get(f'question_{question.id}')
-            correct_answer = next((option.option_text for option in question.options if option.is_correct), None)
-            # Only save answer if user provided one
-            if answer:
-                new_answer = Answer(
-                    exam_id=exam.id,
-                    question_id=question.id,
-                    user_id=current_user.id,
-                    answer=answer,
-                    is_correct=(answer == correct_answer)
-                )
-                db.session.add(new_answer)
-        db.session.commit()
-        # Delete the exam code
-        ExamCode.query.filter_by(exam_id=exam_id, user_id=current_user.id).delete()
-        taken_exam = TakenExam(exam_id=exam_id, user_id=current_user.id)
-        db.session.add(taken_exam)
-        db.session.commit()
-        flash('Exam submitted successfully!', 'success')
-        return redirect(url_for('home'))
     return render_template('take_exam.html', exam=exam, questions=questions, questions_json=questions_json)
 
 @app.route("/submit_exam/<int:exam_id>", methods=['POST'])

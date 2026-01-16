@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container" style="max-width: 600px; margin-top: 50px;">
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-header bg-success text-white">
+            <h3>Import Questions via Excel</h3>
+        </div>
+        <div class="card-body">
+            <p>Upload an Excel file (.xlsx) with the following headers:</p>
+            <ul>
+                <li><code>Question</code></li>
+                <li><code>Option A</code>, <code>Option B</code>, <code>Option C</code>, <code>Option D</code></li>
+                <li><code>Correct Option</code> (e.g., 'A')</li>
+            </ul>
+            <hr>
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.file.label(class="form-label") }}
+                    {{ form.file(class="form-control-file") }}
+                    {% if form.file.errors %}
+                    {% for error in form.file.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="form-group mt-2">
+                    {{ form.submit(class="btn btn-success btn-block") }}
+                </div>
+            </form>
+            <div class="mt-2 text-center">
+                <a href="{{ url_for('exam_dashboard') }}">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

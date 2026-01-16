@@ -1,98 +1,138 @@
-{% extends "layout.html" %}
+{% extends "auth_layout.html" %}
 {% block content %}
-    <div class="card mx-auto" style="width: 70%;">
-        <div class="card-header">
-            Sign Up
+<div class="auth-container">
+    <!-- Left Side form -->
+    <div class="auth-left animate__animated animate__fadeInLeft">
+        <div class="auth-header">
+            <h1 class="auth-title">Create Account</h1>
+            <p class="auth-subtitle">Join ExamZen to start creating or taking exams.</p>
         </div>
-        <div class="card-body">
-            <form method="POST" action="">
-                {{ form.hidden_tag() }}
-                <div class="form-group">
-                    {{ form.username.label(class="form-control-label") }}
-                    {% if form.username.errors %}
-                        {{ form.username(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.username.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {{ form.username(class="form-control form-control-lg") }}
-                    {% endif %}
+
+        <form method="POST" action="" class="auth-form">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group mb-3">
+                {{ form.username.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
+                {% if form.username.errors %}
+                {{ form.username(class="form-control is-invalid") }}
+                <div class="invalid-feedback">
+                    {% for error in form.username.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
                 </div>
-                <div class="form-group">
-                    {{ form.email.label(class="form-control-label") }}
-                    {% if form.email.errors %}
-                        {{ form.email(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.email.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {{ form.email(class="form-control form-control-lg") }}
-                    {% endif %}
+                {% else %}
+                {{ form.username(class="form-control") }}
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-3">
+                {{ form.email.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
+                {% if form.email.errors %}
+                {{ form.email(class="form-control is-invalid") }}
+                <div class="invalid-feedback">
+                    {% for error in form.email.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
                 </div>
-                <div class="form-group">
-                    {{ form.age.label(class="form-control-label") }}
+                {% else %}
+                {{ form.email(class="form-control") }}
+                {% endif %}
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 form-group mb-3">
+                    {{ form.age.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.age.errors %}
-                        {{ form.age(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.age.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
+                    {{ form.age(class="form-control is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.age.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        {{ form.age(class="form-control form-control-lg") }}
+                    {{ form.age(class="form-control") }}
                     {% endif %}
                 </div>
-                <div class="form-group">
-                    {{ form.status.label(class="form-control-label") }}
+                <div class="col-md-6 form-group mb-3">
+                    {{ form.status.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.status.errors %}
-                        {{ form.status(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.status.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
+                    {{ form.status(class="form-control is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.status.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        {{ form.status(class="form-control form-control-lg") }}
+                    {{ form.status(class="form-control") }}
                     {% endif %}
-                <div class="form-group">
-                    {{ form.password.label(class="form-control-label") }}
+                </div>
+                <small class="form-text text-muted">Select "Examiner" to create exams, "Student" to take exams.</small>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 form-group mb-4">
+                    {{ form.password.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.password.errors %}
-                        {{ form.password(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.password.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
+                    {{ form.password(class="form-control is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.password.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        {{ form.password(class="form-control form-control-lg") }}
+                    {{ form.password(class="form-control") }}
                     {% endif %}
                 </div>
-                <div class="form-group">
-                    {{ form.confirm_password.label(class="form-control-label") }}
+                <div class="col-md-6 form-group mb-4">
+                    {{ form.confirm_password.label(class="form-label text-muted small text-uppercase font-weight-bold")
+                    }}
                     {% if form.confirm_password.errors %}
-                        {{ form.confirm_password(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.confirm_password.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
+                    {{ form.confirm_password(class="form-control is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.confirm_password.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        {{ form.confirm_password(class="form-control form-control-lg") }}
+                    {{ form.confirm_password(class="form-control") }}
                     {% endif %}
                 </div>
-                <div class="form-group">
-                    {{ form.submit(class="btn btn-primary") }}
-                </div>
-            </form>
-            <div class="border-top pt-2">
+            </div>
+
+            <div class="form-group">
+                {{ form.submit(class="btn btn-auth-primary btn-block", value="Sign Up") }}
+            </div>
+
+            <div class="text-center mt-3">
                 <small class="text-muted">
-                    Already Have An Account? <a class="ml-2" href="{{ url_for('login') }}">Login</a>
+                    Already have an account? <a href="{{ url_for('login') }}" class="font-weight-bold text-primary">Log
+                        In</a>
                 </small>
             </div>
+        </form>
+    </div>
+
+    <!-- Right Side Visual -->
+    <div class="auth-right animate__animated animate__fadeInRight">
+        <img src="{{ url_for('static', filename='images/auth_illustration.png') }}" class="auth-right-bg"
+            alt="Abstract Background">
+        <div class="auth-right-content">
+            <h2 class="mb-3">Start Your Journey</h2>
+            <p class="lead" style="font-size: 1.1rem; opacity: 0.9;">Create exams, manage classes, and analyze
+                performance effortlessly.</p>
         </div>
     </div>
+</div>
+
+<script>
+    // Simple toggle logic for Organization/Individual
+    document.getElementById('btn-individual').addEventListener('click', function () {
+        document.getElementById('role-group').style.display = 'block';
+    });
+
+    document.getElementById('btn-org').addEventListener('click', function () {
+        document.getElementById('role-group').style.display = 'none';
+        // Logic to set a hidden field to 'Organization' status or similar would go here
+    });
+</script>
 {% endblock %}

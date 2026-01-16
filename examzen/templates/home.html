@@ -1,18 +1,123 @@
+<!-- ==================== NEW HOME.HTML ==================== -->
 {% extends "layout.html" %}
 {% block content %}
-    <div class="card mx-auto" style="width: 70%;">
-        <div class="card-header">
-            Welcome to the Home Page
-        </div>
-        <div class="card-body">
-            <h3>Latest Posts</h3>
-            {% for post in posts %}
-                <div class="mb-4">
-                    <h4>{{ post.title }}</h4>
-                    <p><strong>{{ post.author }}</strong> - {{ post.date_posted }}</p>
-                    <p>{{ post.content }}</p>
-                </div>
-            {% endfor %}
+<!-- Hero with Slideshow -->
+<header class="about-hero-slider">
+    <!-- Background Images -->
+    <div class="slider-bg active"
+        style="background-image: url('{{ url_for('static', filename='images/about_bg_1.jpg') }}');"></div>
+    <div class="slider-bg" style="background-image: url('{{ url_for('static', filename='images/about_bg_2.jpg') }}');">
+    </div>
+    <div class="slider-bg" style="background-image: url('{{ url_for('static', filename='images/about_bg_3.png') }}');">
+    </div>
+
+    <div class="slider-overlay"></div>
+
+    <div class="about-hero-content animate__animated animate__fadeInUp">
+        <h1 class="hero-large-text">Secure. Reliable. Online Exams.</h1>
+        <p class="hero-large-desc">The ultimate platform for secure, intuitive, and powerful online assessments.</p>
+        <div class="d-flex justify-content-center gap-3 mt-4" style="gap: 1rem; padding-top: 20px;">
+            <a href="{{ url_for('register') }}" class="btn btn-lg rounded-pill px-5 font-weight-bold shadow"
+                style="background: #d4af37; color: #1a1f3a; border: none;">Get Started</a>
+            <a href="{{ url_for('about') }}" class="btn btn-lg rounded-pill px-5 font-weight-bold shadow"
+                style="background: white; color: #1a1f3a; border: none;">Learn More</a>
         </div>
     </div>
+</header>
+
+<!-- Script for Slideshow -->
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slider-bg');
+
+    function changeSlide() {
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (currentSlide + 1) % slides.length;
+        slides[currentSlide].classList.add('active');
+    }
+
+    if (slides.length > 0) {
+        setInterval(changeSlide, 5000); // Change every 5 seconds
+    }
+</script>
+
+<!-- Features Section -->
+<section class="features-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="font-weight-bold text-dark">Why Choose ExamZen?</h2>
+            <p class="text-muted">Everything you need to manage exams effectively.</p>
+        </div>
+        <div class="feature-grid">
+            <div class="feature-card shadow-sm bg-white animate__animated animate__fadeInUp">
+                <div class="feature-icon"><i class="fas fa-magic"></i></div>
+                <h3>Easy Creation</h3>
+                <p>Create exams in minutes with our intuitive builder and Excel import.</p>
+            </div>
+            <div class="feature-card shadow-sm bg-white animate__animated animate__fadeInUp"
+                style="animation-delay: 0.1s;">
+                <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>Secure Proctoring</h3>
+                <p>Advanced tab-switching detection and strict time windows.</p>
+            </div>
+            <div class="feature-card shadow-sm bg-white animate__animated animate__fadeInUp"
+                style="animation-delay: 0.2s;">
+                <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
+                <h3>Detailed Analytics</h3>
+                <p>Instant grading and comprehensive performance reports.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Use Case Carousel Section -->
+<section class="use-case-carousel">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="font-weight-bold text-dark">Who is ExamZen For?</h2>
+            <p class="text-muted">Versatile solutions for every assessment need.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="carousel-card h-100 animate__animated animate__fadeInLeft">
+                    <div class="carousel-img-wrapper">
+                        <img src="{{ url_for('static', filename='images/usecase_quiz.png') }}" alt="Teachers">
+                    </div>
+                    <div class="carousel-content">
+                        <h4>For Teachers</h4>
+                        <p class="text-muted small">Setup quick quizzes and term exams for your students instantly.
+                            Manage classes effectively.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="carousel-card h-100 animate__animated animate__fadeInUp">
+                    <div class="carousel-img-wrapper">
+                        <img src="{{ url_for('static', filename='images/usecase_scholarship.png') }}" alt="NGOs">
+                    </div>
+                    <div class="carousel-content">
+                        <h4>For NGOs & Organizations</h4>
+                        <p class="text-muted small">Conduct scholarship exams and large-scale assessments effortlessly
+                            with automated grading.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="carousel-card h-100 animate__animated animate__fadeInRight">
+                    <div class="carousel-img-wrapper">
+                        <img src="{{ url_for('static', filename='images/usecase_prep.png') }}" alt="Self Prep">
+                    </div>
+                    <div class="carousel-content">
+                        <h4>For Self-Starters</h4>
+                        <p class="text-muted small">Create public prep exams for JAMB, interviews, or personal practice
+                            to help the community.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

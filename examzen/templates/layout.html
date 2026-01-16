@@ -1,93 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ExamZen - {% if title %}{{ title }}{% else %}ExamZen{% endif %}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>ExamZen - {% if title %}{{ title }}{% else %}Premium Exam Platform{% endif %}</title>
+    <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='custom.css') }}">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles1.css') }}">
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
-        <div class="container">
+    <!-- Remove.bg Style Navbar -->
+    <nav class="navbar remove-nav">
+        <div class="container navbar-content">
             <a class="navbar-brand animate__animated animate__fadeIn" href="{{ url_for('home') }}">
-                <i class="fas fa-graduation-cap"></i> ExamZen
+                <span class="brand-text">ExamZen</span>
             </a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <a class="nav-link animate__animated animate__fadeIn" href="{{ url_for('home') }}">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link animate__animated animate__fadeIn" href="{{ url_for('about') }}">About</a>
-                    </li>
-                    {% if current_user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle animate__animated animate__fadeIn" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-user"></i> {{ current_user.username }}
-                            </a>
-                            <div class="dropdown-menu dropdown-menu-right animate__animated animate__fadeIn" aria-labelledby="navbarDropdown">
-                                <a class="dropdown-item" href="{{ url_for('profile') }}">Profile</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a>
-                            </div>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link animate__animated animate__fadeIn" href="{{ url_for('login') }}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link animate__animated animate__fadeIn" href="{{ url_for('register') }}">Register</a>
-                        </li>
-                    {% endif %}
+
+            <div class="nav-right">
+                <ul class="navbar-nav d-none d-md-flex">
+                    <li class="nav-item"><a href="{{ url_for('home') }}" class="nav-link-gold">Home</a></li>
+                    <li class="nav-item"><a href="{{ url_for('about') }}" class="nav-link-gold">About</a></li>
                 </ul>
+
+                <div class="auth-buttons ml-4">
+                    {% if current_user.is_authenticated %}
+                    {% if current_user.status == 'Student' or current_user.status|string == 'Student' or
+                    current_user.status.name == 'Student' %}
+                    <a href="{{ url_for('home') }}" class="btn btn-sm btn-link text-dark">Dashboard</a>
+                    {% elif current_user.status == 'Examiner' or current_user.status|string == 'Examiner' or
+                    current_user.status.name == 'Examiner' %}
+                    <a href="{{ url_for('exam_dashboard') }}" class="btn btn-sm btn-link text-dark">Teacher Hub</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-secondary ml-2">Log out</a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-sm btn-link text-dark font-weight-bold">Log in</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-sm btn-primary ml-2 rounded-pill px-4">Sign
+                        up</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container main-content">
-        <div class="row">
-            <div class="col-lg-8 col-md-12">
-                <div class="flash-messages">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} animate__animated animate__fadeIn">
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+    <!-- Flash Messages -->
+    <div class="container flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} animate__animated animate__fadeInDown">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Remove.bg Style Footer -->
+    <footer class="remove-footer">
+        <div class="container">
+            <div class="footer-grid-remove">
+                <!-- Column 1: Learn more -->
+                <div class="footer-col">
+                    <h4>Learn more</h4>
+                    <ul>
+                        <li><a href="{{ url_for('about') }}">About ExamZen</a></li>
+                        <li><a href="#">For Teachers</a></li>
+                        <li><a href="#">For Students</a></li>
+                        <li><a href="#">Security</a></li>
+                        <li><a href="#">Success stories</a></li>
+                    </ul>
                 </div>
-                {% block content %}{% endblock %}
-            </div>
-            <div class="col-lg-4 d-none d-lg-block">
-                <div class="vertical-nav animate__animated animate__slideInRight">
-                    <h4>Information</h4>
-                    <ul class="list-group">
-                        <li class="list-group-item"><a href="#">Latest Exams</a></li>
-                        <li class="list-group-item"><a href="#">Announcements</a></li>
-                        <li class="list-group-item"><a href="#">Calendars</a></li>
-                        <li class="list-group-item"><a href="#">Resources</a></li>
+
+                <!-- Column 2: Tools & API -->
+                <div class="footer-col">
+                    <h4>Tools & API</h4>
+                    <ul>
+                        <li><a href="#">API Documentation</a></li>
+                        <li><a href="#">Integrations</a></li>
+                        <li><a href="#">Exam Builder</a></li>
+                        <li><a href="#">Design Templates</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Support -->
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">Help & FAQs</a></li>
+                        <li><a href="#">Contact us</a></li>
+                        <li><a href="#">Refunds</a></li>
+                        <li><a href="#">Platform Status</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Company -->
+                <div class="footer-col">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Affiliate Program</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="{{ url_for('about') }}">About us</a></li>
+                        <li><a href="#">Press</a></li>
                     </ul>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <footer class="footer mt-auto py-3">
-        <div class="container text-center">
-            <span class="text-muted">&copy; 2023 ExamZen. All rights reserved.</span>
+            <div class="footer-bottom">
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-muted small">
+                        &copy; ExamZen, a StudentFirst Brand.
+                    </div>
+                    <div class="col-md-6 text-md-right">
+                        <div class="social-links-simple">
+                            <a href="#"><i class="fab fa-facebook"></i></a>
+                            <a href="#"><i class="fab fa-twitter"></i></a>
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                        </div>
+                        <div class="legal-links small display-inline-block ml-3">
+                            <a href="#">Terms</a>
+                            <a href="#">Privacy</a>
+                            <a href="#">Calculators</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </footer>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Custom Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
+
 </html>

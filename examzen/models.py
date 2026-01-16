@@ -59,6 +59,57 @@ user_categories = db.Table('user_categories',
     db.Column('category_id', db.Integer, db.ForeignKey('category.id'), primary_key=True)
 )
 
+# Association tables for Classes
+student_classes = db.Table('student_classes',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('class_id', db.Integer, db.ForeignKey('class.id'), primary_key=True)
+)
+
+teacher_classes = db.Table('teacher_classes',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('class_id', db.Integer, db.ForeignKey('class.id'), primary_key=True)
+)
+
+# Class Model
+class Class(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    code = db.Column(db.String(20), unique=True, nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    students = db.relationship('User', secondary=student_classes, backref='enrolled_classes', lazy='dynamic')
+    teachers = db.relationship('User', secondary=teacher_classes, backref='teaching_classes', lazy='dynamic')
+    exams = db.relationship('Exam', backref='assigned_class', lazy=True)
+
+    def __repr__(self):
+        return f"Class('{self.name}', '{self.code}')"
+
+# Notification Model
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    message = db.Column(db.String(500), nullable=False)
+    type = db.Column(db.String(50), default='general')
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_notifications')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='notifications')
+
+# ProctorSession Model
+class ProctorSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
+    events = db.Column(db.Text, nullable=True) # JSON string
+    flags = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # Exam model
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -69,9 +120,12 @@ class Exam(db.Model):
     exam_date = db.Column(db.DateTime, nullable=False)
     duration = db.Column(db.Integer, nullable=False)  # in minutes
     is_private = db.Column(db.Boolean, default=False)
+    start_time = db.Column(db.DateTime, nullable=True) # Strict start window
+    end_time = db.Column(db.DateTime, nullable=True)   # Strict end window
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=True)
 
     # Relationships
     questions = db.relationship('Question', backref='exam', lazy=True, cascade="all, delete-orphan")

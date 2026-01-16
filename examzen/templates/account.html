@@ -1,0 +1,48 @@
+{% extends "dashboard_layout.html" %}
+{% set active_page = "account" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row section-header animate__animated animate__fadeIn">
+        <div class="col-12">
+            <h2 class="section-title">My Account</h2>
+            <p class="section-subtitle">Manage your profile and settings.</p>
+        </div>
+    </div>
+
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-body">
+            <div class="d-flex align-items-center mb-4">
+                <div
+                    style="width: 80px; height: 80px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; margin-right: 20px;">
+                    {{ current_user.username[0]|upper }}
+                </div>
+                <div>
+                    <h3 class="mb-1">{{ current_user.username }}</h3>
+                    <p class="text-muted mb-0">{{ current_user.email }}</p>
+                    <span class="badge badge-secondary mt-2">{{ current_user.status }}</span>
+                </div>
+            </div>
+
+            <hr>
+
+            <h5>Account Details</h5>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <p><strong>Username:</strong> {{ current_user.username }}</p>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Role:</strong> {{ current_user.status }}</p>
+                    <!-- Add more fields here -->
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button class="btn btn-primary">Edit Profile</button>
+                <button class="btn btn-outline-danger ml-2">Change Password</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

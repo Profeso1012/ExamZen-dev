@@ -1,27 +1,512 @@
+<!-- ==================== NEW ABOUT.HTML ==================== -->
 {% extends "layout.html" %}
 {% block content %}
-    <div class="animate__animated animate__fadeIn">
-        <div class="card">
-            <div class="card-header">
-                <h2>About Us <i class="fas fa-info-circle"></i></h2>
-            </div>
-            <div class="card-body">
-                <p class="animate__animated animate__slideInLeft">Welcome to ExamZen, your ultimate exam companion!</p>
-                <p class="animate__animated animate__slideInRight">This is a simple Flask app designed to make online exams fun and interactive.</p>
-                <div class="row">
-                    <div class="col-md-6 animate__animated animate__zoomIn">
-                        <h3>Our Mission</h3>
-                        <p>To provide a seamless and enjoyable exam experience for students and examiners alike.</p>
-                    </div>
-                    <div class="col-md-6 animate__animated animate__zoomIn">
-                        <h3>Our Vision</h3>
-                        <p>To revolutionize the way we learn and take exams, making it more accessible and fun for everyone.</p>
-                    </div>
+<!-- Remove.bg Style Hero (Purple Theme) -->
+<header class="remove-hero purple-theme">
+    <div class="container">
+        <div class="remove-hero-wrapper align-items-center">
+            <!-- Left: Image -->
+            <div class="hero-left-section" style="flex: 1;">
+                <div class="hero-media-container shadow-lg">
+                    <img src="{{ url_for('static', filename='images/landing_3d.png') }}" class="hero-media-preview"
+                        alt="ExamZen Preview">
                 </div>
-                <a href="http://twopsydz.tech" class="btn btn-primary animate__animated animate__bounce" target="_blank">
-                    <i class="fas fa-rocket"></i> Visit Our Website
-                </a>
+            </div>
+
+            <!-- Right: Bold Text -->
+            <div class="hero-right-section text-left pl-lg-5" style="flex: 1;">
+                <h1 class="hero-main-title text-white mb-4" style="font-size: 3.5rem; line-height: 1.1;">
+                    Empowering<br>Education<br>Globally
+                </h1>
+                <p class="hero-sub-text text-light-purple mb-4" style="font-size: 1.25rem;">
+                    Building the future of secure and intelligent assessments.
+                    Join thousands of educators transforming their testing experience today.
+                </p>
             </div>
         </div>
     </div>
+</header>
+
+<div class="container py-5">
+    <!-- Enhanced Interactive How It Works -->
+    <div class="mb-5 pt-5">
+        <h2 class="text-center font-weight-bold mb-4" style="font-size: 3rem; padding-top: 35px;">How It Works</h2>
+        <p class="text-center text-muted mb-5" style="font-size: 1.25rem; max-width: 700px; margin: 0 auto 3rem;">From
+            creating your first exam to analyzing detailed results, our streamlined process makes online assessment
+            effortless and efficient</p>
+
+        <div class="elegant-stepper-container">
+            <!-- Progress Bar -->
+            <div class="stepper-progress-wrapper">
+                <div class="stepper-progress-line"></div>
+                <div class="stepper-progress-active" id="progressActive"></div>
+            </div>
+
+            <!-- Nav -->
+            <div class="elegant-stepper-nav">
+                <div class="elegant-step-item active" onclick="showElegantStep(0)">
+                    <div class="step-number">
+                        <span>1</span>
+                        <div class="step-pulse"></div>
+                    </div>
+                    <div class="step-label">
+                        <div class="step-title">Create</div>
+                        <div class="step-desc">Build your exam</div>
+                    </div>
+                </div>
+                <div class="elegant-step-item" onclick="showElegantStep(1)">
+                    <div class="step-number">
+                        <span>2</span>
+                        <div class="step-pulse"></div>
+                    </div>
+                    <div class="step-label">
+                        <div class="step-title">Organize</div>
+                        <div class="step-desc">Manage classes</div>
+                    </div>
+                </div>
+                <div class="elegant-step-item" onclick="showElegantStep(2)">
+                    <div class="step-number">
+                        <span>3</span>
+                        <div class="step-pulse"></div>
+                    </div>
+                    <div class="step-label">
+                        <div class="step-title">Take</div>
+                        <div class="step-desc">Student experience</div>
+                    </div>
+                </div>
+                <div class="elegant-step-item" onclick="showElegantStep(3)">
+                    <div class="step-number">
+                        <span>4</span>
+                        <div class="step-pulse"></div>
+                    </div>
+                    <div class="step-label">
+                        <div class="step-title">Analyze</div>
+                        <div class="step-desc">Get insights</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="elegant-stepper-content">
+                <div class="elegant-step-pane active" id="elegant-step-0">
+                    <div class="step-content-wrapper">
+                        <div class="step-icon-wrapper">
+                            <i class="fas fa-plus-circle"></i>
+                        </div>
+                        <h3 class="step-content-title">Create Assessments</h3>
+                        <p class="step-content-text">Use our powerful exam builder or simply upload an Excel file to
+                            generate
+                            questions instantly. Support for multiple choice, true/false, and essay questions.</p>
+                        <div class="step-feature-list">
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Drag-and-drop question builder</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Bulk import from Excel/CSV</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Question bank library</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="elegant-step-pane" id="elegant-step-1">
+                    <div class="step-content-wrapper">
+                        <div class="step-icon-wrapper">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <h3 class="step-content-title">Organize Classes</h3>
+                        <p class="step-content-text">Group students into classes for easy assignment. Send notifications
+                            and manage
+                            private exams with granular access control.</p>
+                        <div class="step-feature-list">
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Create unlimited classes</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Bulk student enrollment</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Automated notifications</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="elegant-step-pane" id="elegant-step-2">
+                    <div class="step-content-wrapper">
+                        <div class="step-icon-wrapper">
+                            <i class="fas fa-laptop-code"></i>
+                        </div>
+                        <h3 class="step-content-title">Take Exams</h3>
+                        <p class="step-content-text">Students enjoy a modern, distraction-free interface with
+                            auto-submission,
+                            progress tracking, and seamless navigation between questions.</p>
+                        <div class="step-feature-list">
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Clean, minimal interface</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Auto-save progress</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Tab-switch detection</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="elegant-step-pane" id="elegant-step-3">
+                    <div class="step-content-wrapper">
+                        <div class="step-icon-wrapper">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 class="step-content-title">Analyze Results</h3>
+                        <p class="step-content-text">View detailed performance analytics immediately after the exam.
+                            Identify trends,
+                            monitor progress, and export comprehensive reports.</p>
+                        <div class="step-feature-list">
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Instant automated grading</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Performance analytics</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Export to PDF/Excel</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<!-- Stats Section (Full Width) -->
+<section class="stats-section"
+    style="background: linear-gradient(135deg, #2D1B69, #6f42c1); color: white; padding: 100px 0; margin-top: 80px; height: 300px;">
+    <div class="container">
+        <div class="row align-items-center" style="min-height: 120px;">
+            <div class="col-md-4 text-center mb-4 mb-md-0">
+                <h2 class="font-weight-bold text-warning" style="font-size: 3.5rem; color: white;">10k+</h2>
+                <p class="text-white" style="font-size: 1.2rem; margin-top: 10px;">Exams Taken</p>
+            </div>
+            <div class="col-md-4 text-center mb-4 mb-md-0">
+                <h2 class="font-weight-bold text-warning" style="font-size: 3.5rem; color: white;">500+</h2>
+                <p class="text-white" style="font-size: 1.2rem; margin-top: 10px;">Active Teachers</p>
+            </div>
+            <div class="col-md-4 text-center mb-4 mb-md-0">
+                <h2 class="font-weight-bold text-warning" style="font-size: 3.5rem; color: white;">99.9%</h2>
+                <p class="text-white" style="font-size: 1.2rem; margin-top: 10px;">Uptime</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* Elegant Stepper Styles */
+    .elegant-stepper-container {
+        position: relative;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    /* Progress Bar */
+    .stepper-progress-wrapper {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        height: 4px;
+        z-index: 0;
+    }
+
+    .stepper-progress-line {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: #e0e0e0;
+        border-radius: 2px;
+    }
+
+    .stepper-progress-active {
+        position: absolute;
+        height: 100%;
+        background: linear-gradient(90deg, #6f42c1, #d4af37);
+        border-radius: 2px;
+        width: 0%;
+        transition: width 0.5s ease;
+    }
+
+    /* Navigation */
+    .elegant-stepper-nav {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 60px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .elegant-step-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 1;
+    }
+
+    .step-number {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        color: #999;
+        transition: all 0.3s ease;
+        margin-bottom: 12px;
+        z-index: 2;
+    }
+
+    .step-pulse {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 3px solid #6f42c1;
+        opacity: 0;
+        animation: pulse 2s ease-out infinite;
+    }
+
+    .elegant-step-item.active .step-number {
+        background: linear-gradient(135deg, #6f42c1, #d4af37);
+        border-color: #6f42c1;
+        color: white;
+        box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+    }
+
+    .elegant-step-item.active .step-pulse {
+        opacity: 1;
+    }
+
+    .step-label {
+        text-align: center;
+    }
+
+    .step-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+    }
+
+    .step-desc {
+        font-size: 13px;
+        color: #999;
+    }
+
+    .elegant-step-item.active .step-title {
+        color: #6f42c1;
+    }
+
+    .elegant-step-item.active .step-desc {
+        color: #666;
+    }
+
+    /* Content */
+    .elegant-stepper-content {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        padding: 50px;
+        min-height: 400px;
+    }
+
+    .elegant-step-pane {
+        display: none;
+        animation: fadeInUp 0.5s ease;
+    }
+
+    .elegant-step-pane.active {
+        display: block;
+    }
+
+    .step-content-wrapper {
+        text-align: center;
+    }
+
+    .step-icon-wrapper {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 30px;
+        background: linear-gradient(135deg, #6f42c1, #d4af37);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 25px rgba(111, 66, 193, 0.3);
+    }
+
+    .step-icon-wrapper i {
+        font-size: 48px;
+        color: white;
+    }
+
+    .step-content-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1a1f3a;
+        margin-bottom: 20px;
+    }
+
+    .step-content-text {
+        font-size: 18px;
+        color: #666;
+        line-height: 1.6;
+        max-width: 700px;
+        margin: 0 auto 40px;
+    }
+
+    .step-feature-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        max-width: 500px;
+        margin: 0 auto;
+        text-align: left;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .feature-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+
+    .feature-item i {
+        color: #6f42c1;
+        font-size: 20px;
+    }
+
+    .feature-item span {
+        font-size: 16px;
+        color: #333;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0.8;
+        }
+
+        100% {
+            transform: translate(-50%, -50%) scale(1.5);
+            opacity: 0;
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .elegant-stepper-nav {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stepper-progress-wrapper {
+            display: none;
+        }
+
+        .elegant-step-item {
+            flex-direction: row;
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            margin-right: 15px;
+            margin-bottom: 0;
+        }
+
+        .elegant-stepper-content {
+            padding: 30px 20px;
+        }
+
+        .step-content-title {
+            font-size: 24px;
+        }
+
+        .step-content-text {
+            font-size: 16px;
+        }
+    }
+</style>
+
+<script>
+    function showElegantStep(index) {
+        // Remove active class from navs
+        const navs = document.querySelectorAll('.elegant-step-item');
+        navs.forEach(nav => nav.classList.remove('active'));
+        navs[index].classList.add('active');
+
+        // Update progress bar
+        const progressBar = document.getElementById('progressActive');
+        const progressWidth = (index / (navs.length - 1)) * 100;
+        progressBar.style.width = progressWidth + '%';
+
+        // Hide all panes
+        const panes = document.querySelectorAll('.elegant-step-pane');
+        panes.forEach(pane => pane.classList.remove('active'));
+
+        // Show selected pane
+        document.getElementById('elegant-step-' + index).classList.add('active');
+    }
+</script>
 {% endblock %}
