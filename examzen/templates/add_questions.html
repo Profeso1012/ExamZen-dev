@@ -1,88 +1,112 @@
-{% extends "layout.html" %}
-
+{% extends "dashboard_layout.html" %}
 {% block title %}Add Questions - ExamZen{% endblock %}
+{% block header %}Add Questions: {{ exam.name }}{% endblock %}
 
 {% block content %}
-<div class="card animate__animated animate__fadeIn">
-    <div class="card-header bg-primary text-white">
-        <h2 class="mb-0"><i class="fas fa-question-circle"></i> Add Questions for {{ exam.name }}</h2>
-    </div>
-    <div class="card-body">
-        <form action="{{ url_for('add_questions', exam_id=exam.id) }}" method="post">
-            <div class="form-group">
-                <label for="questionText">Question Text</label>
-                <textarea class="form-control" id="questionText" name="question_text" rows="3" required></textarea>
+<div class="row" style="max-width: 1000px; margin: 0 auto;">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Question {{ q_idx }} / {{ exam.num_questions }}</h5>
+                {% if not exam.questions %}
+                <a href="{{ url_for('import_questions', exam_id=exam.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-file-import mr-1"></i> Import from Excel
+                </a>
+                {% endif %}
             </div>
-            <div class="form-group">
-                <label for="questionNumber">Question Number</label>
-                <input type="number" class="form-control" id="questionNumber" name="question_number" value="{{ exam.questions|length + 1 }}" readonly>
-            </div>
-            <div id="optionsContainer">
-                {% for i in range(exam.num_options) %}
-                <div class="form-group">
-                    <label for="option{{ i }}">Option {{ chr(65 + i) }}</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="option{{ i }}" name="option_text[]" required>
-                        <div class="input-group-append">
-                            <div class="input-group-text">
-                                <input type="radio" name="correct_option" value="{{ i }}" required>
-                                <label class="mb-0 ml-2">Correct</label>
+
+            <div class="card-body">
+                <form method="POST" id="question-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="direction" id="direction" value="next">
+
+                    <div class="form-group">
+                        <label class="form-label">Question Text</label>
+                        <textarea name="question_text" class="form-control" rows="4" required
+                            placeholder="Type your question here...">{{ existing_q.question_text if existing_q else '' }}</textarea>
+                    </div>
+
+                    <div style="margin-top: 25px;">
+                        <label class="form-label">Options</label>
+                        {% for i in range(exam.num_options) %}
+                        {% set opt = existing_q.options[i] if existing_q and existing_q.options|length > i else None %}
+                        <div class="option-entry mb-3 p-3 rounded border bg-light d-flex align-items-center">
+                            <div class="mr-3">
+                                <input type="radio" name="correct_option" value="{{ i }}" required {% if opt and
+                                    opt.is_correct %}checked{% endif %} style="transform: scale(1.3);">
                             </div>
+                            <div class="flex-grow-1">
+                                <input type="text" name="option_text[]" class="form-control"
+                                    placeholder="Option {{ chr(65 + i) }}" required
+                                    value="{{ opt.option_text if opt else '' }}">
+                            </div>
+                            <div class="ml-3 font-weight-bold text-muted">{{ chr(65 + i) }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-between">
+                        {% if q_idx > 1 %}
+                        <button type="button" class="btn btn-outline-secondary px-4" onclick="submitForm('prev')">
+                            <i class="fas fa-chevron-left mr-2"></i> Previous
+                        </button>
+                        {% else %}
+                        <div></div>
+                        {% endif %}
+
+                        <div>
+                            <button type="button" class="btn btn-light px-4 mr-2" onclick="submitForm('finish')">Save &
+                                Finish</button>
+                            <button type="button" class="btn btn-primary px-5 shadow-sm" onclick="submitForm('next')">
+                                {% if q_idx == exam.num_questions %}Finish{% else %}Save & Next <i
+                                    class="fas fa-chevron-right ml-2"></i>{% endif %}
+                            </button>
                         </div>
                     </div>
-                </div>
-                {% endfor %}
+                </form>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-save"></i> Save Question
-            </button>
-        </form>
+        </div>
     </div>
-    <div class="card-footer text-muted">
-        Question {{ exam.questions|length + 1 }} of {{ exam.num_questions }}
+
+    <!-- Question Palette -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Progress</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2" style="gap: 10px;">
+                    {% for i in range(1, exam.num_questions + 1) %}
+                    {% set q_exists = exam.questions|selectattr('question_number', 'equalto', i)|list|length > 0 %}
+                    <a href="{{ url_for('add_questions', exam_id=exam.id, q_idx=i) }}"
+                        class="btn btn-sm {% if i == q_idx %}btn-primary{% elif q_exists %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                        style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                        {{ i }}
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="mt-4 small text-muted">
+                    <div class="d-flex align-items-center mb-1">
+                        <span class="badge badge-primary mr-2" style="width: 15px; height: 15px;">&nbsp;</span> Current
+                    </div>
+                    <div class="d-flex align-items-center mb-1">
+                        <span class="badge badge-success mr-2" style="width: 15px; height: 15px;">&nbsp;</span> Saved
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge badge-secondary mr-2"
+                            style="width: 15px; height: 15px; background: #6c757d22; border: 1px solid #6c757d;">&nbsp;</span>
+                        Pending
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="progress-container mt-4 animate__animated animate__fadeIn">
-    <div class="progress-text">
-        Progress: {{ exam.questions|length }} / {{ exam.num_questions }} Questions
-    </div>
-    <div class="progress-circles">
-        {% for i in range(exam.num_questions) %}
-            {% if i < exam.questions|length %}
-                <span class="circle completed"></span>
-            {% else %}
-                <span class="circle"></span>
-            {% endif %}
-        {% endfor %}
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    .progress-container {
-        text-align: center;
+<script>
+    function submitForm(dir) {
+        document.getElementById('direction').value = dir;
+        document.getElementById('question-form').submit();
     }
-    .progress-text {
-        font-size: 1.2em;
-        margin-bottom: 10px;
-    }
-    .progress-circles {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    .circle {
-        width: 15px;
-        height: 15px;
-        border-radius: 50%;
-        background-color: #e0e0e0;
-        margin: 0 5px;
-        display: inline-block;
-    }
-    .circle.completed {
-        background-color: #28a745;
-    }
-</style>
+</script>
 {% endblock %}

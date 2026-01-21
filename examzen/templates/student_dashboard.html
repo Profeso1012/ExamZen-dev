@@ -1,0 +1,77 @@
+{% extends "dashboard_layout.html" %}
+{% block title %}Student Dashboard - ExamZen{% endblock %}
+{% block header %}My Dashboard{% endblock %}
+
+{% block content %}
+<div class="form-group" style="max-width: 400px; margin-bottom: 30px;">
+    <input type="text" id="examSearch" class="form-control" placeholder="Search exams...">
+</div>
+
+<div class="section-container">
+    <h2 class="section-title" style="margin-bottom: 20px; color: #1C2D38;">Upcoming Exams</h2>
+    {% if upcoming_exams %}
+    <div class="metrics-grid" id="upcomingGrid">
+        {% for exam in upcoming_exams %}
+        <div class="card exam-card" data-name="{{ exam.name | lower }}">
+            <div class="card-header">{{ exam.name }}</div>
+            <div style="margin-bottom: 15px; color: #5C6C75; font-size: 0.9rem;">
+                <div><strong>Date:</strong> {{ exam.exam_date }}</div>
+                <div><strong>Time:</strong> {{ exam.start_time.strftime('%H:%M') }} - {{ exam.end_time.strftime('%H:%M')
+                    }}</div>
+                <div><strong>Duration:</strong> {{ exam.duration }} mins</div>
+                <div><strong>Questions:</strong> {{ exam.num_questions }}</div>
+            </div>
+            <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn btn-primary"
+                style="width: 100%; box-sizing: border-box;">
+                Take Exam
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <p style="color: #666;">No upcoming exams available.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="section-container" style="margin-top: 40px;">
+    <h2 class="section-title" style="margin-bottom: 20px; color: #1C2D38;">Past Exams & Results</h2>
+    {% if taken_exams %}
+    <div class="metrics-grid" id="pastGrid">
+        {% for exam in taken_exams %}
+        <div class="card exam-card" data-name="{{ exam.name | lower }}">
+            <div class="card-header">{{ exam.name }}</div>
+            <div style="margin-bottom: 15px; color: #5C6C75; font-size: 0.9rem;">
+                <div><strong>Date Taken:</strong> {{ exam.exam_date }}</div>
+            </div>
+            <a href="{{ url_for('view_results', exam_id=exam.id) }}" class="btn btn-outline"
+                style="width: 100%; box-sizing: border-box;">
+                View Results
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <p style="color: #666;">You haven't taken any exams yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.getElementById('examSearch').addEventListener('keyup', function () {
+        const query = this.value.toLowerCase();
+        const cards = document.querySelectorAll('.exam-card');
+
+        cards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            if (name.includes(query)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

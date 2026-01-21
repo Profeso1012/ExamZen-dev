@@ -1,0 +1,130 @@
+{% extends "dashboard_layout.html" %}
+{% set active_page = "dashboard" %}
+
+{% block title %}Create Class - ExamZen{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn">
+    <div class="mb-4">
+        <h2 class="mb-1 text-dark font-weight-bold">Create New Class</h2>
+        <p class="text-muted">Setup a new class and assign members.</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="row">
+            <!-- Class Details -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Class Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Class Name</label>
+                            <input type="text" name="class_name" class="form-control" placeholder="e.g. Mathematics 101"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Class Code</label>
+                            <input type="text" name="class_code" class="form-control" placeholder="e.g. MATH101"
+                                required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mt-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Bulk Upload</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-3">Upload a CSV file with columns: <code>Email, Role</code>. Role
+                            should be 'Student' or 'Teacher'.</p>
+                        <div class="form-group">
+                            <input type="file" name="members_csv" class="form-control-file" accept=".csv">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Member Entry -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Manual Member Entry</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-row">
+                            <i class="fas fa-plus mr-1"></i> Add Row
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless" id="members-table">
+                            <thead>
+                                <tr>
+                                    <th>Email Address</th>
+                                    <th style="width: 150px;">Role</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="member-row">
+                                    <td>
+                                        <input type="email" name="emails[]" class="form-control"
+                                            placeholder="user@example.com">
+                                    </td>
+                                    <td>
+                                        <select name="roles[]" class="form-control">
+                                            <option value="Student">Student</option>
+                                            <option value="Teacher">Teacher</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-link text-danger remove-row"
+                                            style="display: none;">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="{{ url_for('organization_dashboard') }}" class="btn btn-link text-muted mr-3">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-5 shadow-sm">Create Class</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('add-row').addEventListener('click', function () {
+        const tbody = document.querySelector('#members-table tbody');
+        const firstRow = tbody.querySelector('.member-row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Clear the input
+        newRow.querySelector('input').value = '';
+
+        // Show the remove button
+        const removeBtn = newRow.querySelector('.remove-row');
+        removeBtn.style.display = 'block';
+
+        tbody.appendChild(newRow);
+
+        // Add event listener to remove button
+        removeBtn.addEventListener('click', function () {
+            newRow.remove();
+        });
+    });
+
+    // Add logic for initial remove buttons if any (though currently none shown)
+    document.querySelectorAll('.remove-row').forEach(btn => {
+        btn.addEventListener('click', function () {
+            btn.closest('tr').remove();
+        });
+    });
+</script>
+{% endblock %}

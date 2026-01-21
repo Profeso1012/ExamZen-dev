@@ -1,72 +1,21 @@
-{% extends "layout.html" %}
+{% extends "dashboard_layout.html" %}
+{% block title %}Results: {{ exam.name }}{% endblock %}
+{% block header %}Exam Results{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center animate__animated animate__zoomIn">
-    <div class="col-md-6 text-center">
-        <div class="card shadow-lg border-0" style="border-radius: 20px;">
-            <div class="card-body p-5">
-                <h1 class="mb-4">Exam Completed!</h1>
+<div class="card" style="max-width: 600px; margin: 40px auto; text-align: center; padding: 40px;">
+    <h2 style="margin-top: 0; color: #1C2D38;">{{ exam.name }}</h2>
+    <div
+        style="font-size: 4rem; font-weight: bold; color: {% if score >= 50 %}var(--secondary-color){% else %}#D93025{% endif %}; margin: 20px 0;">
+        {{ "%.1f"|format(score) }}%
+    </div>
+    <p style="font-size: 1.2rem; color: #5C6C75;">You answered <strong>{{ correct }}</strong> out of <strong>{{ total
+            }}</strong> questions correctly.</p>
 
-                <div style="position: relative; width: 150px; height: 150px; margin: 0 auto;">
-                    <svg viewBox="0 0 36 36" class="circular-chart primary">
-                        <path class="circle-bg" d="M18 2.0845
-                            a 15.9155 15.9155 0 0 1 0 31.831
-                            a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path class="circle" stroke-dasharray="{{ score }}, 100" d="M18 2.0845
-                            a 15.9155 15.9155 0 0 1 0 31.831
-                            a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <text x="18" y="20.35" class="percentage">{{ score | round | int }}%</text>
-                    </svg>
-                </div>
-
-                <h3 class="mt-3 text-primary">{{ correct }} / {{ total }} Correct</h3>
-
-                <hr>
-                <div class="mt-4">
-                    <a href="{{ url_for('exam_dashboard') }}" class="btn btn-outline-primary btn-lg">Back to
-                        Dashboard</a>
-                </div>
-            </div>
-        </div>
+    <div
+        style="margin-top: 40px; display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin-left: auto; margin-right: auto;">
+        <a href="{{ url_for('view_exam_results', exam_id=exam.id) }}" class="btn btn-primary">Review Answers</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
     </div>
 </div>
-
-<style>
-    .circular-chart {
-        display: block;
-        margin: 10px auto;
-        max-width: 80%;
-        max-height: 250px;
-    }
-
-    .circle-bg {
-        fill: none;
-        stroke: #eee;
-        stroke-width: 3.8;
-    }
-
-    .circle {
-        fill: none;
-        stroke-width: 2.8;
-        stroke-linecap: round;
-        animation: progress 1s ease-out forwards;
-    }
-
-    .percentage {
-        fill: #666;
-        font-family: sans-serif;
-        font-weight: bold;
-        font-size: 0.5em;
-        text-anchor: middle;
-    }
-
-    @keyframes progress {
-        0% {
-            stroke-dasharray: 0 100;
-        }
-    }
-
-    .circular-chart.primary .circle {
-        stroke: var(--primary-color);
-    }
-</style>
 {% endblock %}

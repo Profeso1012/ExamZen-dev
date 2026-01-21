@@ -1,0 +1,170 @@
+{% extends "dashboard_layout.html" %}
+{% block title %}Examiner Dashboard - ExamZen{% endblock %}
+{% block header %}Status Dashboard{% endblock %}
+
+{% block content %}
+<!-- Charts Row -->
+<div class="metrics-grid" style="margin-bottom: 30px;">
+    <!-- Chart 1: Average Scores -->
+    <div class="card">
+        <div class="card-header">Average Scores per Exam</div>
+        <canvas id="scoresChart" style="max-height: 250px;"></canvas>
+    </div>
+
+    <!-- Chart 2: Student Activity -->
+    <div class="card">
+        <div class="card-header">Students Taken Exam</div>
+        <canvas id="activityChart" style="max-height: 250px;"></canvas>
+    </div>
+</div>
+
+<!-- Quick Stats / Actions -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-value">{{ exams|length }}</div>
+        <div class="metric-label">Created Exams</div>
+    </div>
+    <div class="metric-card"
+        style="display:flex; align-items:center; justify-content:center; flex-direction:column; cursor:pointer;"
+        onclick="location.href='{{ url_for('create_exam') }}'">
+        <div style="font-size: 2rem; color: var(--secondary-color);">+</div>
+        <div class="metric-label">Create New Exam</div>
+    </div>
+    <div class="metric-card" onclick="location.href='{{ url_for('notifications') }}'" style="cursor:pointer;">
+        <div class="metric-value">{{ notifications|length }}</div>
+        <div class="metric-label">Recent Notifications</div>
+    </div>
+</div>
+
+<!-- Recent Exams -->
+<div class="card">
+    <div class="card-header">
+        <span>Recent Exams</span>
+        <a href="{{ url_for('my_exams') }}" class="btn btn-outline" style="font-size:0.8rem; padding: 4px 10px;">View
+            All</a>
+    </div>
+    {% if exams %}
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Exam Name</th>
+                    <th>Date</th>
+                    <th>Students</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exam in exams %}
+                <tr>
+                    <td>{{ exam.name }}</td>
+                    <td>{{ exam.exam_date }}</td>
+                    <td>{{ exam.num_students }}</td>
+                    <td>
+                        {% if exam.start_time > now %}
+                        <span style="color: #F29D00; font-weight: 500;">Upcoming</span>
+                        {% elif exam.end_time < now %} <span style="color: #666; font-weight: 500;">Closed</span>
+                            {% else %}
+                            <span style="color: #00ED64; font-weight: 500;">Active</span>
+                            {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('manage_exam', exam_id=exam.id) }}"
+                            style="margin-right: 10px; color: var(--primary-color);">Manage</a>
+                        <a href="{{ url_for('exam_analytics', exam_id=exam.id) }}"
+                            style="margin-right: 10px; color: var(--primary-color);">Results</a>
+                        <a href="{{ url_for('delete_exam', exam_id=exam.id) }}" style="color: #D93025;">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #666; margin-top: 10px;">No exams created yet.</p>
+    {% endif %}
+</div>
+
+<!-- Notifications -->
+<div class="card">
+    <div class="card-header">
+        <span>Recent Notifications</span>
+        <a href="{{ url_for('notifications') }}" class="btn btn-outline"
+            style="font-size:0.8rem; padding: 4px 10px;">View All</a>
+    </div>
+    {% if notifications %}
+    <ul style="list-style: none; padding: 0; margin: 0;">
+        {% for notif in notifications %}
+        <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+            <div style="font-weight: 500; font-size: 0.95rem;">{{ notif.title }}</div>
+            <div style="color: #666; font-size: 0.85rem;">{{ notif.message }}</div>
+            <div style="color: #aaa; font-size: 0.8rem; margin-top: 4px;">{{ notif.created_at.strftime('%Y-%m-%d %H:%M')
+                }}</div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p style="color: #666;">No new notifications.</p>
+    {% endif %}
+</div>
+
+<!-- Load Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data passed from Flask
+    const labels = {{ exam_names | tojson }};
+    const scoresData = {{ avg_scores | tojson }};
+    const activityData = {{ student_counts | tojson }};
+
+    // Chart 1: Average Scores (Bar)
+    if (document.getElementById('scoresChart')) {
+        const ctxScores = document.getElementById('scoresChart').getContext('2d');
+        new Chart(ctxScores, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Avg Score (%)',
+                    data: scoresData,
+                    backgroundColor: '#00ED64',
+                    borderColor: '#00C853',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+    }
+
+    // Chart 2: Activity (Line)
+    if (document.getElementById('activityChart')) {
+        const ctxActivity = document.getElementById('activityChart').getContext('2d');
+        new Chart(ctxActivity, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Students Taken',
+                    data: activityData,
+                    backgroundColor: 'rgba(0, 30, 43, 0.1)',
+                    borderColor: '#001E2B',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

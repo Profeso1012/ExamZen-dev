@@ -1,0 +1,74 @@
+{% extends "dashboard_layout.html" %}
+{% set active_page = "dashboard" %}
+
+{% block title %}Organization Dashboard - ExamZen{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1 text-dark font-weight-bold">{{ current_user.username }} Dashboard</h2>
+            <p class="text-muted">Organization Administration</p>
+        </div>
+        <div>
+            <a href="{{ url_for('org_create_class') }}" class="btn btn-primary shadow-sm">
+                <i class="fas fa-plus" style="margin-right: 8px;"></i> Create Class
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white font-weight-bold">
+                    <i class="fas fa-chalkboard mr-2"></i> Created Classes
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Class Name</th>
+                                    <th>Code</th>
+                                    <th>Students</th>
+                                    <th>Teachers</th>
+                                    <th>Created At</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for class in organization.classes %}
+                                <tr>
+                                    <td>
+                                        <div class="font-weight-bold">{{ class.name }}</div>
+                                    </td>
+                                    <td><code class="text-primary">{{ class.code }}</code></td>
+                                    <td><span class="badge badge-pill badge-light border">{{ class.students.count()
+                                            }}</span></td>
+                                    <td><span class="badge badge-pill badge-light border">{{ class.teachers.count()
+                                            }}</span></td>
+                                    <td class="text-muted" style="font-size: 0.85rem;">{{ class.created_at.strftime('%d
+                                        %b %Y') }}</td>
+                                    <td class="text-right">
+                                        <a href="{{ url_for('view_class', class_id=class.id) }}"
+                                            class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        No classes created yet.
+                                        <a href="{{ url_for('org_create_class') }}">Create your first class</a>.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

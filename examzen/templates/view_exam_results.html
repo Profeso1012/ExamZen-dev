@@ -1,75 +1,74 @@
-{% extends "layout.html" %}
+{% extends "dashboard_layout.html" %}
+{% block title %}Detailed Results: {{ exam.name }}{% endblock %}
+{% block header %}Review: {{ exam.name }}{% endblock %}
 
 {% block content %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<div class="card mb-4">
-  <div class="card-header bg-success text-white">
-    <h5 class="card-title mb-0"><i class="fas fa-clipboard-check mr-2"></i>Exam Results - {{ exam.name }}</h5>
+<div class="card">
+  <div class="card-header">
+    <span>Detailed Breakdown</span>
+    <span style="font-weight: bold; color: {% if score >= 50 %}var(--secondary-color){% else %}#D93025{% endif %};">{{
+      "%.1f"|format(score) }}%</span>
   </div>
-  <div class="card-body">
-    <div class="row mb-4">
-      <div class="col-md-6">
-        <h2>Score: <span style="color: #5cb85c; font-weight: bold;">{{ score|round(2) }}%</span></h2>
+
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    {% for info in question_answers %}
+    {% set q = info[0] %}
+    {% set ans = info[1] %}
+    <div
+      style="border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; {% if ans.is_correct %}background-color: #F6FFFA;{% else %}background-color: #FFF5F5;{% endif %}">
+      <div style="font-weight: 500; margin-bottom: 10px; color: #1C2D38;">
+        <span style="color: #666; margin-right: 5px;">Q{{ q.question_number }}.</span> {{ q.question_text }}
       </div>
-      <div class="col-md-6">
-        <canvas id="score-chart" width="200" height="200"></canvas>
+
+      <div style="margin-left: 20px; font-size: 0.95rem;">
+        <!-- Options display is tricky without options list in 'info'. 
+                         'q' is a Question object, so it should have .options 
+                    -->
+        {% for opt in q.options %}
+        <div style="margin-bottom: 5px; display: flex; align-items: center; 
+                        {% if opt.option_letter == ans.answer %}font-weight: bold;{% endif %}
+                        {% if opt.option_letter == ans.answer and not ans.is_correct %}color: #D93025;{% endif %}
+                        {% if opt.is_correct %}color: #137333;{% endif %}
+                        ">
+          <span style="display: inline-block; width: 20px;">
+            {% if opt.option_letter == ans.answer %}
+            {% if ans.is_correct %}✓{% else %}✗{% endif %}
+            {% elif opt.is_correct %}
+            ✓
+            {% else %}
+            -
+            {% endif %}
+          </span>
+          <span>{{ opt.option_letter }}) {{ opt.option_text }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top: 10px; font-size: 0.85rem; color: #555;">
+        Your Answer: <strong>{{ ans.answer }}</strong> | Correct Answer: <strong>{{ correct_options[q.id] }}</strong>
       </div>
     </div>
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('score-chart').getContext('2d');
-        const chart = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Correct', 'Incorrect'],
-            datasets: [{
-              label: 'Score',
-              data: {{ score_data|tojson }},
-              backgroundColor: [
-                'rgba(76, 175, 80, 0.7)',
-                'rgba(244, 67, 54, 0.7)'
-              ],
-              borderColor: [
-                'rgba(76, 175, 80, 1)',
-                'rgba(244, 67, 54, 1)'
-              ],
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              }
-            }
-          }
-        });
-      });
-    </script>
-    <div class="table-responsive">
-      <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>Question</th>
-            <th>Your Answer</th>
-            <th>Correct Answer</th>
-            <th>Result</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for question, answer in question_answers %}
-          <tr>
-            <td>{{ question.question_text }}</td>
-            <td>{{ answer.answer }}</td>
-            <td>{{ correct_options.get(question.id, 'N/A') }}</td>
-            <td>{{ 'Correct' if answer.answer == correct_options.get(question.id, '') else 'Incorrect' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    {% else %}
+    <p>No answers recorded.</p>
+    {% endfor %}
   </div>
+</div>
+
+<div class="card" style="margin-top: 30px; background-color: #FAFCFC;">
+  <div class="card-header">Report an Issue / Send Complaint</div>
+  <form action="{{ url_for('submit_complaint') }}" method="POST">
+    <!-- Assuming generic complaint for now. Ideally pass exam_id hidden -->
+    <div class="form-group">
+      <label class="form-label">Subject</label>
+      <input type="text" name="subject" class="form-control" value="Issue with Exam: {{ exam.name }}" readonly>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea name="description" class="form-control" rows="3" placeholder="Describe the issue..."></textarea>
+    </div>
+    <div style="text-align: right;">
+      <button type="submit" class="btn btn-primary">Send Complaint</button>
+    </div>
+  </form>
 </div>
 {% endblock %}

@@ -4,231 +4,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ExamZen - Dashboard</title>
-    <!-- Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles1.css') }}">
-    <style>
-        body {
-            background-color: #f7f9fc;
-            overflow-x: hidden;
-        }
-
-        .dashboard-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar Styles */
-        .sidebar {
-            width: 260px;
-            background-color: #fff;
-            border-right: 1px solid #e0e0e0;
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            height: 100vh;
-            z-index: 100;
-        }
-
-        .sidebar-header {
-            padding: 24px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .sidebar-brand {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #2D1B69;
-            /* Deep Purple */
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .sidebar-menu {
-            flex: 1;
-            padding: 24px 0;
-            overflow-y: auto;
-        }
-
-        .menu-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 24px;
-            color: #555;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.2s;
-            border-left: 3px solid transparent;
-        }
-
-        .menu-item:hover,
-        .menu-item.active {
-            background-color: #f0f4ff;
-            color: #0b66c3;
-            /* Theme Blue */
-            border-left-color: #0b66c3;
-        }
-
-        .menu-item i {
-            width: 24px;
-            margin-right: 12px;
-            font-size: 1.1rem;
-        }
-
-        .sidebar-footer {
-            padding: 24px;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px;
-            border-radius: 8px;
-            transition: background 0.2s;
-            text-decoration: none;
-            color: #333;
-        }
-
-        .user-profile:hover {
-            background-color: #f5f5f5;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background-color: #2D1B69;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-
-        .user-info div {
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .user-info span {
-            font-size: 0.75rem;
-            color: #888;
-        }
-
-        /* Main Content Area */
-        .main-content {
-            flex: 1;
-            margin-left: 260px;
-            /* Match sidebar width */
-            padding: 40px;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-            }
-
-            .sidebar.show {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-                padding: 20px;
-            }
-        }
-    </style>
+    <title>{% block title %}ExamZen Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>ExamZen</span>
+        </div>
+        <div class="sidebar-content">
+            <a href="{{ url_for('dashboard') }}"
+                class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                </svg>
+                Dashboard
+            </a>
 
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="{{ url_for('home') }}" class="sidebar-brand">
-                    <i class="fas fa-graduation-cap"></i> ExamZen
-                </a>
+            {% if current_user.status == 'Examiner' %}
+            <a href="{{ url_for('my_exams') }}"
+                class="nav-item {% if request.endpoint == 'my_exams' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                </svg>
+                My Exams
+            </a>
+            <a href="{{ url_for('classes') }}" class="nav-item {% if request.endpoint == 'classes' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                </svg>
+                My Classes
+            </a>
+            <a href="{{ url_for('create_exam') }}"
+                class="nav-item {% if request.endpoint == 'create_exam' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                </svg>
+                Create Exam
+            </a>
+            {% elif current_user.status == 'Student' %}
+            <a href="{{ url_for('home') }}" class="nav-item {% if request.endpoint == 'home' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+                </svg>
+                Upcoming Exams
+            </a>
+            <a href="{{ url_for('my_results') }}"
+                class="nav-item {% if request.endpoint == 'my_results' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 8c0 1.11-.9 2-2 2h-2v2h4v2H8v-4h2v-2H8v-2h4v-2H8V7h7v4z" />
+                </svg>
+                My Results
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('notifications') }}"
+                class="nav-item {% if request.endpoint == 'notifications' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
+                </svg>
+                Notifications
+            </a>
+            <a href="{{ url_for('account') }}" class="nav-item {% if request.endpoint == 'account' %}active{% endif %}">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M3 5v14c0 1.1.89 2 2 2h14c1.1 0 2-.89 2-2V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2zm12 4c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3zm-9 8c0-2 4-3.1 6-3.1s6 1.1 6 3.1v1H6v-1z" />
+                </svg>
+                Profile & Settings
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-item">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
+                </svg>
+                Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="top-header">
+            <div class="mobile-toggle" onclick="toggleSidebar()">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+                </svg>
             </div>
-
-            <nav class="sidebar-menu">
-                {% if current_user.status == 'Examiner' or current_user.status|string == 'Examiner' %}
-                <a href="{{ url_for('exam_dashboard') }}"
-                    class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
-                    <i class="fas fa-th-large"></i> Dashboard
-                </a>
-                <a href="{{ url_for('create_exam') }}"
-                    class="menu-item {% if active_page == 'create_exam' %}active{% endif %}">
-                    <i class="fas fa-plus-circle"></i> Create Exam
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-file-alt"></i> My Exams
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-users"></i> Students
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-chart-bar"></i> Analytics
-                </a>
-                {% else %}
-                <a href="{{ url_for('home') }}" class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
-                    <i class="fas fa-th-large"></i> Dashboard
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-book-open"></i> My Exams
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-history"></i> History
-                </a>
-                {% endif %}
-            </nav>
-
-            <div class="sidebar-footer">
-                <a href="{{ url_for('account') }}" class="user-profile">
-                    <div class="user-avatar">
-                        {{ current_user.username[0]|upper }}
-                    </div>
-                    <div class="user-info">
-                        <div>{{ current_user.username }}</div>
-                        <span>{{ current_user.email }}</span>
-                    </div>
-                </a>
-                <a href="{{ url_for('logout') }}" class="btn btn-block btn-outline-danger mt-3 btn-sm">
-                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                </a>
+            <div class="header-left">
+                <h1>{% block header %}{% endblock %}</h1>
             </div>
-        </aside>
+            <div class="header-right">
+                <a href="{{ url_for('home') }}" class="header-link">Home</a>
+                <div class="user-snippet">
+                    <span>{{ current_user.username }}</span>
+                    {% if current_user.profile_pic %}
+                    <img src="data:{{ current_user.profile_pic_mimetype or 'image/jpeg' }};base64,{{ current_user.profile_pic_base64 }}"
+                        alt="Profile" class="user-avatar">
+                    {% else %}
+                    <div class="user-avatar" style="display:flex;align-items:center;justify-content:center;color:#aaa">?
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Flash Messages -->
+        <section class="content-area">
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category }} animate__animated animate__fadeInDown shadow-sm mb-4">
-                {{ message }}
+            <div class="card"
+                style="background-color: {% if category == 'success' %}#E6F4EA{% else %}#FCE8E6{% endif %}; border-color: transparent; margin-bottom: 20px;">
+                <span
+                    style="color: {% if category == 'success' %}#137333{% else %}#C5221F{% endif %}; font-weight:500;">{{
+                    message }}</span>
             </div>
             {% endfor %}
             {% endif %}
             {% endwith %}
 
             {% block content %}{% endblock %}
-        </main>
+        </section>
     </div>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+    </script>
+    {% block scripts %}{% endblock %}
 </body>
 
 </html>

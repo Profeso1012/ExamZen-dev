@@ -1,64 +1,71 @@
-{% extends "layout.html" %}
+{% extends "dashboard_layout.html" %}
+{% block title %}{{ classroom.name }} - ExamZen{% endblock %}
+{% block header %}{{ classroom.name }}{% endblock %}
+
 {% block content %}
-<div class="container animate__animated animate__fadeIn">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-            <h1>{{ classroom.name }}</h1>
-            <p class="text-muted">Code: <span class="badge badge-primary">{{ classroom.code }}</span></p>
-        </div>
-        <div>
-            <!-- actions -->
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('classes') }}" class="btn btn-outline" style="font-size: 0.85rem;">← Back to Classes</a>
+</div>
+
+<div class="metrics-grid">
+    <div class="card">
+        <div class="card-header">Class Details</div>
+        <div style="font-size: 1rem; line-height: 1.6;">
+            <p><strong>Class Name:</strong> {{ classroom.name }}</p>
+            <p><strong>Class Code:</strong> <span style="font-family: monospace; background: #eee; padding: 2px 5px;">{{
+                    classroom.code }}</span></p>
+            <p><strong>Created By:</strong> {{ classroom.creator.username }}</p>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Students Column -->
-        <div class="col-md-6">
-            <div class="card mb-2">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Students ({{ classroom.students.count() }})</h5>
-                    <!-- Placeholder for Invite/Add -->
-                    <button class="btn btn-sm btn-outline-primary"><i class="fas fa-user-plus"></i> Add</button>
-                </div>
-                <div class="card-body">
-                    {% if classroom.students.count() > 0 %}
-                    <ul class="list-group list-group-flush">
-                        {% for student in classroom.students %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ student.username }}
-                            <span class="text-muted">{{ student.email }}</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-muted">No students yet.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Exams Column -->
-        <div class="col-md-6">
-            <div class="card mb-2">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Assigned Exams</h5>
-                </div>
-                <div class="card-body">
-                    {% if classroom.exams %}
-                    <ul class="list-group">
-                        {% for exam in classroom.exams %}
-                        <li class="list-group-item">
-                            <strong>{{ exam.name }}</strong><br>
-                            <small class="text-muted">{{ exam.start_time }} - {{ exam.end_time }}</small>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-muted">No exams assigned.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    <div class="card">
+        <div class="card-header">Teachers</div>
+        <ul style="padding-left: 20px;">
+            {% for teacher in classroom.teachers %}
+            <li>{{ teacher.username }}</li>
+            {% endfor %}
+        </ul>
     </div>
+</div>
+
+<div class="metrics-grid" style="margin-top: 20px; grid-template-columns: 2fr 1fr; align-items: start;">
+    <div class="card">
+        <div class="card-header">Students ({{ classroom.students|length }})</div>
+        {% if classroom.students %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+            {% for student in classroom.students %}
+            <div style="padding: 10px; border: 1px solid #eee; border-radius: 4px; text-align: center;">
+                <div style="font-weight: 500;">{{ student.username }}</div>
+                <div style="font-size: 0.8rem; color: #999;">{{ student.email }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: #666;">No students enrolled yet.</p>
+        {% endif %}
+    </div>
+
+    {% if current_user in classroom.teachers %}
+    <div class="card">
+        <div class="card-header">Add Students</div>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="form-group">
+                <label class="form-label">Upload Excel/CSV</label>
+                <input type="file" name="students_file" class="form-control" accept=".xlsx,.xls,.csv">
+                <small style="color: #888;">Column "Email" required.</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Manual Emails</label>
+                <textarea name="manual_emails" class="form-control" rows="3"
+                    placeholder="student1@example.com, student2@example.com"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Add Students</button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

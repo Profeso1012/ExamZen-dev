@@ -8,10 +8,34 @@
             <p class="auth-subtitle">Join ExamZen to start creating or taking exams.</p>
         </div>
 
-        <form method="POST" action="" class="auth-form">
+        <form method="POST" action="" class="auth-form" id="registerForm">
             {{ form.hidden_tag() }}
+            <!-- Hidden field for registration type -->
+            {{ form.registration_type(class="d-none") }}
 
-            <div class="form-group mb-3">
+            <!-- Registration Type Toggle -->
+            <div class="btn-group w-100 mb-4" role="group" aria-label="Registration Type">
+                <button type="button" class="btn btn-outline-primary active" id="btn-individual">Individual</button>
+                <button type="button" class="btn btn-outline-primary" id="btn-org">Organization</button>
+            </div>
+
+            <!-- Organization Name Field (Hidden by default) -->
+            <div class="form-group mb-3" id="org-name-group" style="display: none;">
+                {{ form.organization_name.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
+                {% if form.organization_name.errors %}
+                {{ form.organization_name(class="form-control is-invalid") }}
+                <div class="invalid-feedback">
+                    {% for error in form.organization_name.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                {{ form.organization_name(class="form-control") }}
+                {% endif %}
+            </div>
+
+            <!-- Individual: Username -->
+            <div class="form-group mb-3" id="username-group">
                 {{ form.username.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                 {% if form.username.errors %}
                 {{ form.username(class="form-control is-invalid") }}
@@ -25,6 +49,7 @@
                 {% endif %}
             </div>
 
+            <!-- Common: Email -->
             <div class="form-group mb-3">
                 {{ form.email.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                 {% if form.email.errors %}
@@ -39,7 +64,8 @@
                 {% endif %}
             </div>
 
-            <div class="row">
+            <!-- Individual: Age & Status -->
+            <div class="row" id="individual-extra-group">
                 <div class="col-md-6 form-group mb-3">
                     {{ form.age.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.age.errors %}
@@ -66,7 +92,10 @@
                     {{ form.status(class="form-control") }}
                     {% endif %}
                 </div>
-                <small class="form-text text-muted">Select "Examiner" to create exams, "Student" to take exams.</small>
+                <div class="col-12">
+                    <small class="form-text text-muted">Select "Examiner" to create exams, "Student" to take
+                        exams.</small>
+                </div>
             </div>
 
             <div class="row">
@@ -125,14 +154,44 @@
 </div>
 
 <script>
-    // Simple toggle logic for Organization/Individual
-    document.getElementById('btn-individual').addEventListener('click', function () {
-        document.getElementById('role-group').style.display = 'block';
+    const btnIndividual = document.getElementById('btn-individual');
+    const btnOrg = document.getElementById('btn-org');
+    const registrationTypeInput = document.getElementById('registration_type');
+
+    const individualGroup = document.getElementById('individual-extra-group');
+    const usernameGroup = document.getElementById('username-group');
+    const orgNameGroup = document.getElementById('org-name-group');
+
+    btnIndividual.addEventListener('click', function () {
+        // Update UI
+        btnIndividual.classList.add('active');
+        btnOrg.classList.remove('active');
+
+        // Show Individual Fields
+        individualGroup.style.display = 'flex'; // row
+        usernameGroup.style.display = 'block';
+
+        // Hide Org Fields
+        orgNameGroup.style.display = 'none';
+
+        // Update Hidden Input
+        registrationTypeInput.value = 'individual';
     });
 
-    document.getElementById('btn-org').addEventListener('click', function () {
-        document.getElementById('role-group').style.display = 'none';
-        // Logic to set a hidden field to 'Organization' status or similar would go here
+    btnOrg.addEventListener('click', function () {
+        // Update UI
+        btnOrg.classList.add('active');
+        btnIndividual.classList.remove('active');
+
+        // Hide Individual Fields
+        individualGroup.style.display = 'none';
+        usernameGroup.style.display = 'none';
+
+        // Show Org Fields
+        orgNameGroup.style.display = 'block';
+
+        // Update Hidden Input
+        registrationTypeInput.value = 'organization';
     });
 </script>
 {% endblock %}

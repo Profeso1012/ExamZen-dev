@@ -37,6 +37,7 @@ class Organization(db.Model):
     # Relationships
     users = db.relationship('User', backref='organization', lazy=True)
     categories = db.relationship('Category', backref='organization', lazy=True)
+    classes = db.relationship('Class', backref='org', lazy=True)
 
     def __repr__(self):
         return f"Organization('{self.name}')"
@@ -128,7 +129,7 @@ class Exam(db.Model):
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=True)
 
     # Relationships
-    questions = db.relationship('Question', backref='exam', lazy=True, cascade="all, delete-orphan")
+    questions = db.relationship('Question', backref='exam', lazy=True, cascade="all, delete-orphan", order_by="Question.question_number")
     exam_codes = db.relationship('ExamCode', backref='exam', lazy=True, cascade="all, delete-orphan")
     answers = db.relationship('Answer', backref='exam', lazy=True, cascade="all, delete-orphan")
     categories = db.relationship('Category', secondary='exam_categories', backref='exams', lazy='dynamic')

@@ -1,62 +1,74 @@
-{% extends "layout.html" %}
+{% extends "dashboard_layout.html" %}
+{% block title %}My Classes - ExamZen{% endblock %}
+{% block header %}Class Management{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-md-4">
-        <div class="card animate__animated animate__fadeInLeft">
-            <div class="card-header bg-primary text-white">
-                <h4>Create New Class</h4>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="">
-                    {{ form.hidden_tag() }}
-                    <div class="form-group">
-                        {{ form.name.label(class="form-label") }}
-                        {{ form.name(class="form-control") }}
-                        {% if form.name.errors %}
-                        {% for error in form.name.errors %}
-                        <span class="text-danger">{{ error }}</span>
-                        {% endfor %}
-                        {% endif %}
-                    </div>
-                    <div class="form-group">
-                        {{ form.code.label(class="form-label") }}
-                        {{ form.code(class="form-control", placeholder="Unique Code") }}
-                        {% if form.code.errors %}
-                        {% for error in form.code.errors %}
-                        <span class="text-danger">{{ error }}</span>
-                        {% endfor %}
-                        {% endif %}
-                    </div>
-                    <div class="form-group">
-                        {{ form.submit(class="btn btn-primary btn-block") }}
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-8">
-        <h2 class="mb-2">Your Classes</h2>
+<div class="metrics-grid" style="grid-template-columns: 2fr 1fr; align-items: start;">
+
+    <!-- Class List -->
+    <div class="card">
+        <div class="card-header">Your Classes</div>
         {% if classes %}
-        <div class="row">
-            {% for class in classes %}
-            <div class="col-md-6 mb-2">
-                <div class="card h-100 animate__animated animate__fadeInUp">
-                    <div class="card-body">
-                        <h4 class="card-title">{{ class.name }}</h4>
-                        <h6 class="text-muted"><i class="fas fa-barcode"></i> Code: {{ class.code }}</h6>
-                        <p class="card-text">
-                            <i class="fas fa-users"></i> {{ class.students.count() }} Students
-                        </p>
-                        <a href="{{ url_for('view_class', class_id=class.id) }}" class="btn btn-outline btn-sm">Manage
-                            Class</a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Class Name</th>
+                    <th>Code</th>
+                    <th>Students</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cls in classes %}
+                <tr>
+                    <td>{{ cls.name }}</td>
+                    <td><span style="background: #eee; padding: 2px 6px; border-radius: 4px; font-family: monospace;">{{
+                            cls.code }}</span></td>
+                    <td>{{ cls.students|length }}</td>
+                    <td>
+                        <a href="{{ url_for('view_class', class_id=cls.id) }}"
+                            style="color: var(--primary-color);">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-        <div class="alert alert-info">You haven't created any classes yet.</div>
+        <p style="color: #666;">No classes created yet.</p>
         {% endif %}
+    </div>
+
+    <!-- Create Class -->
+    <div class="card">
+        <div class="card-header">Create New Class</div>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                <label class="form-label">Class Name</label>
+                {{ form.name(class="form-control", placeholder="e.g. History 101") }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">Class Code (Unique)</label>
+                {{ form.code(class="form-control", placeholder="e.g. HIS101") }}
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;"><strong>Add Students (Optional)</strong></p>
+
+            <div class="form-group">
+                <label class="form-label">Upload Excel/CSV</label>
+                {{ form.students_file(class="form-control") }}
+                <small style="color: #888;">Column "Email" required.</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Manual Emails</label>
+                {{ form.manual_emails(class="form-control", rows=3, placeholder="student1@example.com,
+                student2@example.com") }}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Create Class</button>
+        </form>
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,14 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Page Under Construction{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-tools fa-4x text-muted mb-3 opacity-50"></i>
+        <h2 class="font-weight-bold text-dark">Under Construction</h2>
+        <p class="text-muted">This feature is coming soon.</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary shadow-sm">Back to Dashboard</a>
+</div>
+{% endblock %}

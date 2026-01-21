@@ -5,7 +5,8 @@ from examzen.models import Notification, User
 def parse_questions_excel(file_stream):
     """
     Parses an uploaded Excel file for questions.
-    Expected columns: 'Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Option'
+    Expected columns: 'Question Text', 'Option A', 'Option B', 'Option C', 'Option D', 
+                      'Option E' (optional), 'Correct Answer', 'Marks' (optional)
     """
     try:
         df = pd.read_excel(file_stream)
@@ -14,17 +15,29 @@ def parse_questions_excel(file_stream):
         
         questions = []
         for index, row in df.iterrows():
-            # Basic validation
-            if pd.isna(row.get('question')): continue
+            # Basic validation - support both 'question' and 'question text'
+            question_text = row.get('question text') or row.get('question')
+            if pd.isna(question_text): 
+                continue
+            
+            # Support both 'correct answer' and 'correct option'
+            correct_answer = row.get('correct answer') or row.get('correct option')
+            correct_letter = str(correct_answer).strip().upper() if not pd.isna(correct_answer) else None
+            
+            # Get marks if available
+            marks = row.get('marks', 1)
+            if pd.isna(marks):
+                marks = 1
             
             q_data = {
-                'text': row.get('question'),
+                'text': str(question_text),
                 'options': [],
-                'correct': str(row.get('correct option')).strip().upper() if not pd.isna(row.get('correct option')) else None
+                'correct': correct_letter,
+                'marks': int(marks)
             }
             
-            # Options A-D
-            letters = ['a', 'b', 'c', 'd']
+            # Options A-E (support up to 5 options)
+            letters = ['a', 'b', 'c', 'd', 'e']
             for i, letter in enumerate(letters):
                 col_name = f'option {letter}'
                 opt_text = row.get(col_name)

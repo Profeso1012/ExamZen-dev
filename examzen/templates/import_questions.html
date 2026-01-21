@@ -1,37 +1,37 @@
-{% extends "layout.html" %}
+{% extends "dashboard_layout.html" %}
+{% block title %}Import Questions: {{ exam.name }}{% endblock %}
+{% block header %}Import Questions{% endblock %}
+
 {% block content %}
-<div class="container" style="max-width: 600px; margin-top: 50px;">
-    <div class="card animate__animated animate__fadeInUp">
-        <div class="card-header bg-success text-white">
-            <h3>Import Questions via Excel</h3>
-        </div>
-        <div class="card-body">
-            <p>Upload an Excel file (.xlsx) with the following headers:</p>
-            <ul>
-                <li><code>Question</code></li>
-                <li><code>Option A</code>, <code>Option B</code>, <code>Option C</code>, <code>Option D</code></li>
-                <li><code>Correct Option</code> (e.g., 'A')</li>
-            </ul>
-            <hr>
-            <form method="POST" enctype="multipart/form-data">
-                {{ form.hidden_tag() }}
-                <div class="form-group">
-                    {{ form.file.label(class="form-label") }}
-                    {{ form.file(class="form-control-file") }}
-                    {% if form.file.errors %}
-                    {% for error in form.file.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-                <div class="form-group mt-2">
-                    {{ form.submit(class="btn btn-success btn-block") }}
-                </div>
-            </form>
-            <div class="mt-2 text-center">
-                <a href="{{ url_for('exam_dashboard') }}">Back to Dashboard</a>
-            </div>
-        </div>
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <div class="card-header">Upload Questions File</div>
+
+    <div style="background: #e3f2fd; padding: 15px; border-radius: 4px; margin-bottom: 20px; color: #0d47a1;">
+        <p style="margin: 0 0 10px 0;"><strong>Instructions:</strong></p>
+        <ul style="margin: 0; padding-left: 20px;">
+            <li>File must be .xlsx or .csv</li>
+            <li>Required columns: <code>text</code>, <code>options</code> (comma separated?), <code>answer</code>
+                (letter)</li>
+            <li>See template for details.</li>
+        </ul>
     </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            <label class="form-label">Select File</label>
+            {{ form.file(class="form-control", style="padding: 10px;") }}
+            {% for error in form.file.errors %}
+            <span style="color: red; font-size: 0.85rem;">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div style="text-align: right; margin-top: 20px;">
+            <a href="{{ url_for('manage_exam', exam_id=exam.id) }}" class="btn btn-outline"
+                style="margin-right: 10px;">Cancel</a>
+            <button type="submit" class="btn btn-primary">Upload & Import</button>
+        </div>
+    </form>
 </div>
 {% endblock %}

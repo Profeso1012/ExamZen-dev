@@ -1,0 +1,95 @@
+{% extends "dashboard_layout.html" %}
+{% block title %}Notifications - ExamZen{% endblock %}
+{% block header %}Notifications{% endblock %}
+
+{% block content %}
+<div class="metrics-grid"
+    style="align-items: start; {% if current_user.status == 'Examiner' %}grid-template-columns: 2fr 1fr;{% else %}grid-template-columns: 1fr;{% endif %}">
+
+    <!-- Notification List -->
+    <div class="card">
+        <div class="card-header">Inbox</div>
+        {% if notifications %}
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            {% for notif in notifications %}
+            <div
+                style="border-bottom: 1px solid #eee; padding-bottom: 15px; {% if loop.last %}border-bottom: none; padding-bottom: 0;{% endif %}">
+                <div style="font-weight: 500; color: #1C2D38; display: flex; justify-content: space-between;">
+                    <span>{{ notif.title }}</span>
+                    <span style="font-size: 0.8rem; color: #999;">{{ notif.created_at.strftime('%Y-%m-%d %H:%M')
+                        }}</span>
+                </div>
+                <div style="margin-top: 5px; color: #5C6C75; line-height: 1.4;">
+                    {{ notif.message }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: #666; text-align: center; padding: 20px;">You have no notifications.</p>
+        {% endif %}
+    </div>
+
+    <!-- Send Notification (Examiner Only) -->
+    {% if current_user.status == 'Examiner' %}
+    <div class="card">
+        <div class="card-header">Send Notification</div>
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label">Recipient Type</label>
+                <div style="display: flex; gap: 15px;">
+                    <label style="display:flex;align-items:center;"><input type="radio" name="recipient_type"
+                            value="student" checked onchange="toggleRecipient('student')"> Student</label>
+                    <label style="display:flex;align-items:center;"><input type="radio" name="recipient_type"
+                            value="class" onchange="toggleRecipient('class')"> Class</label>
+                </div>
+            </div>
+
+            <div class="form-group" id="studentInput">
+                <label class="form-label">Student Username</label>
+                <input type="text" name="recipient" class="form-control" placeholder="Enter username">
+            </div>
+
+            <div class="form-group" id="classInput" style="display:none;">
+                <label class="form-label">Select Class</label>
+                <select name="class_id" class="form-control">
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}">{{ cls.name }} ({{ cls.code }})</option>
+                    {% endfor %}
+                </select>
+                {% if not classes %}
+                <small style="color: red;">No classes found. Create a class first.</small>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea name="message" class="form-control" rows="4" required></textarea>
+            </div>
+
+            <div style="text-align: right;">
+                <button type="submit" class="btn btn-primary">Send Message</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function toggleRecipient(type) {
+            if (type === 'student') {
+                document.getElementById('studentInput').style.display = 'block';
+                document.getElementById('classInput').style.display = 'none';
+            } else {
+                document.getElementById('studentInput').style.display = 'none';
+                document.getElementById('classInput').style.display = 'block';
+            }
+        }
+    </script>
+    {% endif %}
+
+</div>
+{% endblock %}

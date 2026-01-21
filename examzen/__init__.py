@@ -5,6 +5,8 @@ from flask_login import LoginManager
 from dotenv import load_dotenv
 import os
 
+from flask_wtf.csrf import CSRFProtect
+
 app = Flask(__name__)
 #load_dotenv('.env.development.local')
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
@@ -33,6 +35,7 @@ def _jinja2_filter_datetime(date, fmt=None):
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
+csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'

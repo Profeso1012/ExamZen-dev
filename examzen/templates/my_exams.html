@@ -1,0 +1,93 @@
+{% extends "dashboard_layout.html" %}
+{% set active_page = "my_exams" %}
+
+{% block title %}My Exams - ExamZen{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0 text-dark font-weight-bold">My Exams</h2>
+        <a href="{{ url_for('create_exam') }}" class="btn btn-primary shadow-sm">
+            <i class="fas fa-plus mr-2"></i> Create New Exam
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-top-0 pl-4">Exam Name</th>
+                            <th class="border-top-0">Created</th>
+                            <th class="border-top-0">Date</th>
+                            <th class="border-top-0">Students</th>
+                            <th class="border-top-0">Status</th>
+                            <th class="border-top-0 text-right pr-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if exams %}
+                        {% for exam in exams %}
+                        <tr>
+                            <td class="pl-4">
+                                <a href="{{ url_for('manage_exam', exam_id=exam.id) }}"
+                                    class="text-dark font-weight-bold text-decoration-none">
+                                    {{ exam.name }}
+                                </a>
+                            </td>
+                            <td class="text-muted small">{{ exam.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ exam.exam_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ exam.num_students }}</td>
+                            <td>
+                                {% if exam.exam_date > now %}
+                                <span
+                                    class="badge badge-subtle-primary text-primary px-3 py-2 rounded-pill">Scheduled</span>
+                                {% elif exam.exam_date < now %} <span
+                                    class="badge badge-subtle-secondary text-secondary px-3 py-2 rounded-pill">
+                                    Completed</span>
+                                    {% else %}
+                                    <span
+                                        class="badge badge-subtle-success text-success px-3 py-2 rounded-pill">Active</span>
+                                    {% endif %}
+                            </td>
+                            <td class="text-right pr-4">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light" type="button" data-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right border-0 shadow">
+                                        <a class="dropdown-item" href="{{ url_for('manage_exam', exam_id=exam.id) }}">
+                                            <i class="fas fa-cog mr-2 text-muted"></i> Manage
+                                        </a>
+                                        {% if exam.exam_date > now %}
+                                        <a class="dropdown-item" href="{{ url_for('edit_exam', exam_id=exam.id) }}">
+                                            <i class="fas fa-pen mr-2 text-muted"></i> Edit
+                                        </a>
+                                        {% endif %}
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger"
+                                            href="{{ url_for('delete_exam', exam_id=exam.id) }}">
+                                            <i class="fas fa-trash-alt mr-2"></i> Delete
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <img src="{{ url_for('static', filename='images/empty_state.svg') }}" alt="No Data"
+                                    style="height: 120px; opacity: 0.6;">
+                                <p class="text-muted mt-3">No exams found.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

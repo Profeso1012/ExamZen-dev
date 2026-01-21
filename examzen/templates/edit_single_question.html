@@ -1,0 +1,48 @@
+{% extends "dashboard_layout.html" %}
+{% block title %}Edit Question - ExamZen{% endblock %}
+{% block header %}Edit Question: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Question {{ question.question_number }}</h5>
+    </div>
+
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="form-group">
+                <label class="form-label">Question Text</label>
+                <textarea name="question_text" class="form-control" rows="4"
+                    required>{{ question.question_text }}</textarea>
+            </div>
+
+            <div style="margin-top: 25px;">
+                <label class="form-label">Options</label>
+                {% for i in range(exam.num_options) %}
+                {% set opt = question.options[i] if question.options|length > i else None %}
+                <div class="option-entry mb-3 p-3 rounded border bg-light d-flex align-items-center" style="gap: 15px;">
+                    <input type="radio" name="correct_option" value="{{ i }}" required {% if opt and opt.is_correct
+                        %}checked{% endif %} style="transform: scale(1.3); cursor: pointer; flex-shrink: 0;">
+
+                    <div class="flex-grow-1">
+                        <input type="text" name="option_text[]" class="form-control border-0 bg-white"
+                            placeholder="Option {{ chr(65 + i) }}" required value="{{ opt.option_text if opt else '' }}"
+                            style="border-radius: 4px;">
+                    </div>
+
+                    <div class="font-weight-bold text-muted" style="min-width: 30px; text-align: right;">{{ chr(65 + i)
+                        }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-4 text-right">
+                <a href="{{ url_for('manage_exam', exam_id=exam.id) }}" class="btn btn-link text-muted mr-3">Cancel</a>
+                <button type="submit" class="btn btn-primary px-5 shadow-sm">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

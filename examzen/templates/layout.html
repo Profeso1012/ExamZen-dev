@@ -33,7 +33,7 @@
                     <a href="{{ url_for('home') }}" class="btn btn-sm btn-link text-dark">Dashboard</a>
                     {% elif current_user.status == 'Examiner' or current_user.status|string == 'Examiner' or
                     current_user.status.name == 'Examiner' %}
-                    <a href="{{ url_for('exam_dashboard') }}" class="btn btn-sm btn-link text-dark">Teacher Hub</a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-link text-dark">Teacher Hub</a>
                     {% endif %}
                     <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-secondary ml-2">Log out</a>
                     {% else %}

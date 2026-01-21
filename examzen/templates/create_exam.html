@@ -1,69 +1,103 @@
-{% extends "layout.html" %}
-
-{% block title %}Create Exam{% endblock %}
+{% extends "dashboard_layout.html" %}
+{% block title %}Create Exam - ExamZen{% endblock %}
+{% block header %}Create New Exam{% endblock %}
 
 {% block content %}
-<div class="content-section animate__animated animate__fadeInUp">
-  <form method="POST" action="">
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+  <div class="card-header">Exam Details</div>
+  <form method="POST" action="" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
-    <fieldset class="form-group">
-      <legend class="border-bottom mb-4">Create Exam</legend>
-      <div class="form-group">
-        {{ form.name.label(class="form-label") }}
-        {{ form.name(class="form-control form-control-lg") }}
-      </div>
-      <!-- Row for Numbers -->
-      <div class="form-row" style="display: flex; gap: 20px;">
-        <div class="col form-group">
-          {{ form.num_questions.label(class="form-label") }}
-          {{ form.num_questions(class="form-control") }}
-        </div>
-        <div class="col form-group">
-          {{ form.num_options.label(class="form-label") }}
-          {{ form.num_options(class="form-control") }}
-        </div>
-        <div class="col form-group">
-          {{ form.num_students.label(class="form-label") }}
-          {{ form.num_students(class="form-control") }}
-        </div>
-      </div>
 
-      <!-- Row for Timing -->
-      <h5 class="mt-2 text-primary"><i class="far fa-clock"></i> Timing Window (Strict)</h5>
-      <div class="form-row" style="display: flex; gap: 20px;">
-        <div class="col form-group">
-          {{ form.start_time.label(class="form-label") }}
-          {{ form.start_time(class="form-control", type="datetime-local") }}
-        </div>
-        <div class="col form-group">
-          {{ form.end_time.label(class="form-label") }}
-          {{ form.end_time(class="form-control", type="datetime-local") }}
-        </div>
-      </div>
-
-      <div class="form-group">
-        {{ form.duration.label(class="form-label") }}
-        {{ form.duration(class="form-control", placeholder="In Minutes") }}
-        <small class="text-muted">Users will differntiate this time once they start.</small>
-      </div>
-
-      <div class="form-check">
-        {{ form.is_private(class="form-check-input") }}
-        {{ form.is_private.label(class="form-check-label") }}
-      </div>
-
-      <!-- Student Select (Optional) -->
-      {% if form.student_usernames.choices %}
-      <div class="form-group mt-2">
-        {{ form.student_usernames.label(class="form-label") }}
-        {{ form.student_usernames(class="form-control", size=5) }}
-        <small class="text-muted">Hold Ctrl/Cmd to select multiple.</small>
-      </div>
-      {% endif %}
-    </fieldset>
     <div class="form-group">
-      {{ form.submit(class="btn btn-primary") }}
+      <label class="form-label">Exam Name</label>
+      {{ form.name(class="form-control", placeholder="e.g. Midterm Mathematics") }}
+    </div>
+
+    <div class="metrics-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 20px;">
+      <div class="form-group">
+        <label class="form-label">Start Time</label>
+        {{ form.start_time(class="form-control", type="datetime-local") }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Time</label>
+        {{ form.end_time(class="form-control", type="datetime-local") }}
+      </div>
+    </div>
+
+    <div class="metrics-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 20px;">
+      <div class="form-group">
+        <label class="form-label">Duration (Minutes)</label>
+        {{ form.duration(class="form-control") }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">No. of Questions</label>
+        {{ form.num_questions(class="form-control") }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Options per Question</label>
+        {{ form.num_options(class="form-control") }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Number of Students / Access Codes</label>
+      {{ form.num_students(class="form-control") }}
+    </div>
+
+    <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+      {{ form.is_private(id="is_private_checkbox", style="width:auto; transform:scale(1.2);") }}
+      <label class="form-label" style="margin:0;">Private Exam (Code Access)</label>
+    </div>
+
+    <!-- Private Exam Recipients Section -->
+    <div id="private_recipients_section"
+      style="display: none; margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+      <h4 style="margin-top: 0; font-size: 1.1rem; color: var(--primary-color);">Recipients</h4>
+
+      <div class="form-group">
+        <label class="form-label">Select Class (Optional)</label>
+        <select name="class_id" class="form-control">
+          <option value="">-- No Class --</option>
+          {% for cls in current_user.teaching_classes %}
+          <option value="{{ cls.id }}">{{ cls.name }} ({{ cls.students|length }} students)</option>
+          {% endfor %}
+        </select>
+        <small style="color: #888;">Selecting a class will grant access to all students in that class.</small>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+
+      <div class="form-group">
+        <label class="form-label">Upload Recipients (Excel/CSV)</label>
+        <input type="file" name="recipients_file" class="form-control" accept=".xlsx,.xls,.csv">
+        <small style="color: #888;">Column "Email" required.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Manual Emails</label>
+        <textarea name="manual_recipients" class="form-control" rows="3"
+          placeholder="student1@example.com, student2@example.com"></textarea>
+      </div>
+    </div>
+
+    <div style="margin-top: 30px; text-align: right;">
+      <button type="submit" class="btn btn-primary">Create & Proceed to Questions</button>
     </div>
   </form>
 </div>
+
+<script>
+  // Toggle private recipients section
+  const privateCheckbox = document.getElementById('is_private_checkbox');
+  const recipientsSection = document.getElementById('private_recipients_section');
+
+  privateCheckbox.addEventListener('change', function () {
+    recipientsSection.style.display = this.checked ? 'block' : 'none';
+  });
+
+  // Check on page load if editing
+  if (privateCheckbox.checked) {
+    recipientsSection.style.display = 'block';
+  }
+</script>
 {% endblock %}

@@ -1,142 +1,114 @@
 {% extends "dashboard_layout.html" %}
-{% set active_page = "dashboard" %}
+{% block title %}Examiner Home - ExamZen{% endblock %}
+{% block header %}Welcome, {{ current_user.username }}{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Welcome, Examiner {{ current_user.username }}!</h1>
-
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0"><i class="fas fa-tasks mr-2"></i>Manage Exams</h5>
-                </div>
-                <div class="card-body">
-                    <a href="{{ url_for('create_exam') }}" class="btn btn-success mb-3"><i
-                            class="fas fa-plus mr-2"></i>Create New Exam</a>
-                    <a href="{{ url_for('exam_dashboard') }}" class="btn btn-success mb-3"><i
-                            class="fas fa-plus mr-2"></i>Your Exams</a>
-                    {% if exams %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Exam Name</th>
-                                    <th>Date</th>
-                                    <th>Students</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for exam in exams %}
-                                <tr>
-                                    <td>{{ exam.name }}</td>
-                                    <td>{{ exam.exam_date | strftime('%Y-%m-%d %H:%M') }}</td>
-                                    <td>{{ exam.num_students }}</td>
-                                    <td>
-                                        <a href="{{ url_for('update_exam', exam_id=exam.id) }}"
-                                            class="btn btn-sm btn-primary">Update</a>
-                                        <a href="{{ url_for('view_exam_results', exam_id=exam.id) }}"
-                                            class="btn btn-sm btn-info">View Results</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-muted">You haven't created any exams yet. Use the 'Create New Exam' button to get
-                        started.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0"><i class="fas fa-chart-pie mr-2"></i>Exam Statistics</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="examStatsChart"></canvas>
-                    <ul class="list-group list-group-flush mt-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Total Exams Created
-                            <span class="badge badge-primary badge-pill">{{ exams|length }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Total Students Enrolled
-                            <span class="badge badge-primary badge-pill">{{ exams|sum(attribute='num_students')
-                                }}</span>
-                        </li>
-                    </ul>
-                    <a href="{{ url_for('exam_statistics') }}" class="btn btn-outline-success btn-block mt-3">View
-                        Detailed Statistics</a>
-                </div>
-            </div>
-        </div>
+<div class="metrics-grid">
+    <!-- Chart 1: Average Scores -->
+    <div class="card">
+        <div class="card-header">Average Scores per Exam</div>
+        <canvas id="scoresChart" style="max-height: 250px;"></canvas>
     </div>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0"><i class="fas fa-clock mr-2"></i>Recent Activity</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group">
-                        <li class="list-group-item">John Doe completed Math Final (Score: 92/100)</li>
-                        <li class="list-group-item">5 new students enrolled in Science Quiz</li>
-                        <li class="list-group-item">English Essay exam updated</li>
-                    </ul>
-                    <a href="{{ url_for('activity_log') }}" class="btn btn-outline-info btn-block mt-3">View Full
-                        Activity Log</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0"><i class="fas fa-bullhorn mr-2"></i>Announcements</h5>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <div class="form-group">
-                            <label for="announcement">New Announcement</label>
-                            <textarea class="form-control" id="announcement" rows="3"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-warning">Post Announcement</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <!-- Chart 2: Student Activity -->
+    <div class="card">
+        <div class="card-header">Students Taken Exam</div>
+        <canvas id="activityChart" style="max-height: 250px;"></canvas>
     </div>
 </div>
 
+<div class="card" style="margin-top: 20px;">
+    <div class="card-header">Latest Exams</div>
+    {% if exams %}
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Exam Name</th>
+                    <th>Date</th>
+                    <th>Enrolled</th>
+                    <th>Taken</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exam in exams %}
+                <tr>
+                    <td>{{ exam.name }}</td>
+                    <td>{{ exam.exam_date }}</td>
+                    <td>{{ exam.num_students }}</td>
+                    <td>
+                        <!-- Simple verify count query or pass it? For now, simplistic check or separate query was ideal but keep simple -->
+                        <!-- We passed exams object, not with counts. Let's just show basic info or link -->
+                        <a href="{{ url_for('exam_analytics', exam_id=exam.id) }}">View Stats</a>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('manage_exam', exam_id=exam.id) }}"
+                            style="color: var(--primary-color);">Manage</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: #666;">
+        <p style="font-size: 1.1rem; margin-bottom: 20px;">No exams created yet.</p>
+        <a href="{{ url_for('create_exam') }}" class="btn btn-primary">Create Your First Exam</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Load Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    var ctx = document.getElementById('examStatsChart').getContext('2d');
-    var myChart = new Chart(ctx, {
-        type: 'doughnut',
+    // Data passed from Flask
+    const labels = {{ exam_names | tojson }};
+    const scoresData = {{ avg_scores | tojson }};
+    const activityData = {{ student_counts | tojson }};
+
+    // Chart 1: Average Scores (Bar)
+    const ctxScores = document.getElementById('scoresChart').getContext('2d');
+    new Chart(ctxScores, {
+        type: 'bar',
         data: {
-            labels: ['Math', 'Science', 'English', 'History', 'Art'],
+            labels: labels,
             datasets: [{
-                data: [30, 25, 20, 15, 10],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)'
-                ]
+                label: 'Avg Score (%)',
+                data: scoresData,
+                backgroundColor: '#00ED64',
+                borderColor: '#00C853',
+                borderWidth: 1
             }]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                }
+            scales: {
+                y: { beginAtZero: true, max: 100 }
+            }
+        }
+    });
+
+    // Chart 2: Activity (Line)
+    const ctxActivity = document.getElementById('activityChart').getContext('2d');
+    new Chart(ctxActivity, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Students Taken',
+                data: activityData,
+                backgroundColor: 'rgba(0, 30, 43, 0.1)',
+                borderColor: '#001E2B',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
             }
         }
     });

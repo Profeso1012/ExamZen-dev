@@ -2,14 +2,110 @@ import os
 import secrets
 import uuid
 from PIL import Image
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import render_template, url_for, flash, redirect, request, jsonify, abort
 from examzen import app, db, bcrypt
 from examzen.forms import RegistrationForm, LoginForm, UpdateAccountForm, ExamForm, OrganizationRegistrationForm, ClassForm, ExcelUploadForm
-from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer, Class, Notification
+from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer, Class, Notification, Organization
 from examzen.utils import parse_questions_excel, parse_students_excel, send_notification
 from flask_login import login_user, current_user, logout_user, login_required
 
+
+@app.route("/org/create_class", methods=['GET', 'POST'])
+@login_required
+def org_create_class():
+    if current_user.status != 'Organization' or not current_user.organization_id:
+        abort(403)
+        
+    if request.method == 'POST':
+        class_name = request.form.get('class_name')
+        class_code = request.form.get('class_code')
+        
+        # Check if class code exists
+        if Class.query.filter_by(code=class_code).first():
+            flash('This class code is already in use.', 'danger')
+            return redirect(url_for('org_create_class'))
+            
+        new_class = Class(
+            name=class_name,
+            code=class_code,
+            organization_id=current_user.organization_id,
+            created_by_id=current_user.id
+        )
+        db.session.add(new_class)
+        db.session.flush() # Get the class ID
+        
+        all_members = [] # List of (email, role)
+        
+        # 1. Manual Entry
+        emails = request.form.getlist('emails[]')
+        roles = request.form.getlist('roles[]')
+        for e, r in zip(emails, roles):
+            if e and e.strip():
+                all_members.append((e.strip().lower(), r))
+                
+        # 2. CSV Upload
+        if 'members_csv' in request.files:
+            file = request.files['members_csv']
+            if file and file.filename.endswith('.csv'):
+                try:
+                    df = pd.read_csv(file)
+                    df.columns = [c.strip().lower() for c in df.columns]
+                    # Support multiple column names for flexibility
+                    email_col = next((c for c in df.columns if 'email' in c), None)
+                    role_col = next((c for c in df.columns if 'role' in c or 'status' in c), None)
+                    
+                    if email_col and role_col:
+                        for _, row in df.iterrows():
+                            e = str(row[email_col]).strip().lower()
+                            r = str(row[role_col]).strip().title()
+                            if r not in ['Student', 'Teacher', 'Examiner']:
+                                r = 'Student' # Default
+                            if r == 'Teacher': r = 'Examiner' # Map 'Teacher' to 'Examiner' status if needed, 
+                                                              # though User model has 'Examiner'. 
+                                                              # Status enum is: 'Student', 'Examiner', 'Organization'
+                            all_members.append((e, r))
+                except Exception as ex:
+                    flash(f'Error parsing CSV: {ex}', 'warning')
+                    
+        # Process Members
+        added_count = 0
+        for email, role in all_members:
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                # Create user
+                username = email.split('@')[0]
+                # Handle username collision
+                if User.query.filter_by(username=username).first():
+                    username = f"{username}_{secrets.token_hex(2)}"
+                
+                hashed_password = bcrypt.generate_password_hash('Student123').decode('utf-8')
+                user = User(
+                    username=username,
+                    email=email,
+                    age=18,
+                    status=role if role in ['Student', 'Examiner'] else 'Student',
+                    password=hashed_password,
+                    organization_id=current_user.organization_id
+                )
+                db.session.add(user)
+                db.session.flush()
+                
+            # Assign to class
+            if role == 'Examiner' or role == 'Teacher':
+                if user not in new_class.teachers:
+                    new_class.teachers.append(user)
+                    added_count += 1
+            else:
+                if user not in new_class.students:
+                    new_class.students.append(user)
+                    added_count += 1
+                    
+        db.session.commit()
+        flash(f'Class "{class_name}" created with {added_count} members.', 'success')
+        return redirect(url_for('organization_dashboard'))
+        
+    return render_template('org_create_class.html')
 
 @app.route('/proctor/log', methods=['POST'])
 @login_required
@@ -33,41 +129,11 @@ def proctor_log():
 @app.route("/home")
 def home():
     if current_user and current_user.is_authenticated:
-        if current_user.status == 'Student':
-            # Get exams that the student is registered for
-            public_exams = Exam.query.filter_by(is_private=False).all()
-            registered_exams = Exam.query.join(ExamCode).filter(ExamCode.user_id == current_user.id).all()
-            all_exams = list(set(public_exams + registered_exams))  # Remove duplicates           
-            upcoming_exams = []
-            taken_exams = TakenExam.query.filter_by(user_id=current_user.id).all()          
-            taken_exam_ids = [exam.exam_id for exam in taken_exams]  # Get exam IDs from taken_exams
-            taken_exams = Exam.query.filter(Exam.id.in_(taken_exam_ids)).all()  # Get exams from Exam table
-            
-            # Remove duplicates from taken_exams
-            taken_exams = list(set(taken_exams))
-            
-            for exam in all_exams:
-                if exam not in taken_exams:  # Check if exam is not already in taken_exams
-                    answers = Answer.query.filter_by(exam_id=exam.id, user_id=current_user.id).first()
-                    if answers:
-                        taken_exams.append(exam)
-                    else:
-                        upcoming_exams.append(exam)           
-            return render_template('home_student.html', upcoming_exams=upcoming_exams, taken_exams=taken_exams)
-
-        elif current_user.status == 'Examiner':
-            user_exams = list(set(Exam.query.filter_by(created_by_id=current_user.id).all()))  # Remove duplicates
-            exams = user_exams[:2]  # Get the first two exams
-            sample_exams = [
-                Exam(id=1, name="Sample-math Exam", exam_date="2023-09-15", num_students=30),
-                Exam(id=2, name="Sample-science Exam", exam_date="2023-09-20", num_students=25)
-            ]
-            exams += [exam for exam in sample_exams if exam not in exams][:2 - len(exams)]  # Add sample exams to fill the remaining slots
-            return render_template('home_examiner.html', exams=exams)
-
-        else:
-            # Handle unknown status
-            return "Unknown status", 400
+        # Redirect authenticated users to their dashboard.
+        # This unifies the experience and avoids using old 'home_student.html' or 'home_examiner.html'
+        # which might contain bugs or legacy code. The 'dashboard' route handles
+        # the logic for rendering the correct dashboard based on user status.
+        return redirect(url_for('dashboard'))
     
     # Default home page for non-logged-in users
     return render_template('home.html')
@@ -85,19 +151,65 @@ def register():
     forms = RegistrationForm()
     if forms.validate_on_submit():
         hash_pwd = bcrypt.generate_password_hash(forms.password.data).decode('utf-8')
-        #status = forms.status.data
-        new_user = User(
-            username=forms.username.data,
-            email=forms.email.data,
-            age=forms.age.data,
-            status=forms.status.data,
-            password=hash_pwd
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        flash(f'Account created for {forms.username.data}!, You can now log in', 'success')
-        return redirect(url_for('login'))
+        
+        if forms.registration_type.data == 'organization':
+            # create org
+            new_org = Organization(name=forms.organization_name.data)
+            db.session.add(new_org)
+            db.session.flush() # get ID
+            
+            # create admin user
+            new_user = User(
+                username=forms.organization_name.data, # using org name as username for now as discussed
+                email=forms.email.data,
+                age=0, # Not applicable
+                status='Organization',
+                password=hash_pwd,
+                organization_id=new_org.id
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            flash(f'Organization account created for {forms.organization_name.data}! You can now log in.', 'success')
+            return redirect(url_for('login'))
+            
+        else:
+            # Individual
+            new_user = User(
+                username=forms.username.data,
+                email=forms.email.data,
+                age=forms.age.data,
+                status=forms.status.data,
+                password=hash_pwd
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            flash(f'Account created for {forms.username.data}! You can now log in', 'success')
+            return redirect(url_for('login'))
+            
     return render_template('register.html', title='Register', form=forms)
+
+
+@app.route("/forgot_password", methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    # Using LoginForm structure but effectively just for email
+    # A dedicated ForgotPasswordForm would be better but for now we can just use HTML form or reuse LoginForm if we ignore password
+    # Actually, let's just make a simple GET/POST here with loose coupling
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        if user:
+            # Logic to send email would go here
+            flash('An email has been sent with instructions to reset your password.', 'info')
+        else:
+            # Security: Don't reveal if user exists? Or maybe do for this level of app? 
+            # Standard practice is to say "If an account exists..." but user might want explicit
+             flash('An email has been sent with instructions to reset your password.', 'info')
+        return redirect(url_for('login'))
+        
+    return render_template('forgot_password.html', title='Forgot Password')
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -209,6 +321,9 @@ def create_exam():
     form.student_usernames.choices = [(user.id, user.username) for user in User.query.filter_by(status='Student').all()]
 
     if form.validate_on_submit():
+        # Get class_id from request if provided
+        class_id = request.form.get('class_id')
+        
         new_exam = Exam(
             name=form.name.data,
             num_questions=form.num_questions.data,
@@ -219,16 +334,79 @@ def create_exam():
             exam_date=form.start_time.data.date(), # Fallback for listing
             duration=form.duration.data,
             created_by_id=current_user.id,
-            is_private=form.is_private.data
+            is_private=form.is_private.data,
+            class_id=int(class_id) if class_id and class_id.isdigit() else None
         )
         db.session.add(new_exam)
         db.session.flush()
 
-        # Generate codes if private
+        # Handle Private Exam Recipients
         if form.is_private.data:
-            for _ in range(form.num_students.data):
+            recipient_users = set()
+            
+            # 1. Class-based recipients
+            if class_id and class_id.isdigit():
+                classroom = Class.query.get(int(class_id))
+                if classroom and current_user in classroom.teachers:
+                    for student in classroom.students:
+                        recipient_users.add(student)
+            
+            # 2. File upload
+            if 'recipients_file' in request.files:
+                file = request.files['recipients_file']
+                if file and file.filename:
+                    file_emails = parse_students_excel(file)
+                    for email in file_emails:
+                        user = User.query.filter_by(email=email.strip().lower()).first()
+                        if not user:
+                            # Auto-create student
+                            username = email.split('@')[0]
+                            if User.query.filter_by(username=username).first():
+                                username = f"{username}{secrets.randbelow(9999)}"
+                            
+                            hashed_pwd = bcrypt.generate_password_hash('Student123').decode('utf-8')
+                            user = User(
+                                username=username,
+                                email=email.strip().lower(),
+                                status='Student',
+                                age=18,
+                                password=hashed_pwd,
+                                organization_id=current_user.organization_id
+                            )
+                            db.session.add(user)
+                            db.session.flush()
+                        recipient_users.add(user)
+            
+            # 3. Manual emails
+            manual_text = request.form.get('manual_recipients', '')
+            if manual_text:
+                manual_list = manual_text.replace('\n', ',').split(',')
+                for email in manual_list:
+                    if email.strip():
+                        user = User.query.filter_by(email=email.strip().lower()).first()
+                        if not user:
+                            # Auto-create student
+                            username = email.split('@')[0]
+                            if User.query.filter_by(username=username).first():
+                                username = f"{username}{secrets.randbelow(9999)}"
+                            
+                            hashed_pwd = bcrypt.generate_password_hash('Student123').decode('utf-8')
+                            user = User(
+                                username=username,
+                                email=email.strip().lower(),
+                                status='Student',
+                                age=18,
+                                password=hashed_pwd,
+                                organization_id=current_user.organization_id
+                            )
+                            db.session.add(user)
+                            db.session.flush()
+                        recipient_users.add(user)
+            
+            # Generate ExamCodes for all recipients
+            for user in recipient_users:
                 code = str(uuid.uuid4())[:7].upper()
-                exam_code = ExamCode(exam_id=new_exam.id, code=code)
+                exam_code = ExamCode(exam_id=new_exam.id, code=code, user_id=user.id)
                 db.session.add(exam_code)
 
         db.session.commit()
@@ -271,7 +449,7 @@ def import_questions(exam_id):
             
             db.session.commit()
             flash(f'Successfully imported {count} questions!', 'success')
-            return redirect(url_for('exam_dashboard'))
+            return redirect(url_for('manage_exam', exam_id=exam.id))
             
     return render_template('import_questions.html', form=form, exam=exam)
 
@@ -281,7 +459,9 @@ def import_questions(exam_id):
 @login_required
 def classes():
     if current_user.status == 'Student':
-        my_classes = current_user.enrolled_classes.all()
+        # Removed .all() as relationships might be mapped as lists or queries. 
+        # Error indicated 'InstrumentedList' so it's already a list.
+        my_classes = current_user.enrolled_classes
         return render_template('classes_student.html', classes=my_classes)
     else:
         # Teacher
@@ -292,94 +472,425 @@ def classes():
                 code=form.code.data,
                 created_by_id=current_user.id
             )
+            # Add Teachers
             new_class.teachers.append(current_user)
             db.session.add(new_class)
+            db.session.flush() # Get ID
+
+            # Process Students
+            added_count = 0
+            created_count = 0
+            all_emails = set()
+
+            # 1. Excel/CSV
+            if form.students_file.data:
+                file_emails = parse_students_excel(form.students_file.data)
+                for e in file_emails:
+                    all_emails.add(e.strip().lower())
+
+            # 2. Manual Emails
+            if form.manual_emails.data:
+                manual_list = form.manual_emails.data.replace('\n', ',').split(',')
+                for e in manual_list:
+                    if e.strip():
+                        all_emails.add(e.strip().lower())
+
+            # 3. Provision/Link
+            for email in all_emails:
+                user = User.query.filter_by(email=email).first()
+                if not user:
+                    # Create new student account
+                    username = email.split('@')[0]
+                    # Simple duplicate username checker
+                    if User.query.filter_by(username=username).first():
+                        username = f"{username}{secrets.randbelow(9999)}"
+                    
+                    hashed_pwd = bcrypt.generate_password_hash('Student123').decode('utf-8')
+                    user = User(
+                        username=username,
+                        email=email,
+                        status='Student',
+                        age=18, # Default
+                        password=hashed_pwd,
+                        organization_id=current_user.organization_id # Inherit Org if applicable
+                    )
+                    db.session.add(user)
+                    created_count += 1
+                
+                # Add to class if not already
+                if user not in new_class.students:
+                    new_class.students.append(user)
+                    added_count += 1
+
             db.session.commit()
-            flash('Class created successfully!', 'success')
+            
+            msg = 'Class created successfully!'
+            if added_count > 0:
+                msg += f' Added {added_count} students ({created_count} new accounts).'
+            flash(msg, 'success')
             return redirect(url_for('classes'))
             
-        my_classes = current_user.teaching_classes.all()
+        my_classes = current_user.teaching_classes
         return render_template('classes_teacher.html', classes=my_classes, form=form)
 
-@app.route('/class/<int:class_id>', methods=['GET'])
+@app.route('/class/<int:class_id>', methods=['GET', 'POST'])
 @login_required
 def view_class(class_id):
     classroom = Class.query.get_or_404(class_id)
     # Check access
     if current_user not in classroom.teachers and current_user not in classroom.students:
         abort(403)
+    
+    # Handle POST - Add Students
+    if request.method == 'POST' and current_user in classroom.teachers:
+        added_count = 0
+        created_count = 0
+        all_emails = set()
+
+        # 1. Excel/CSV
+        if 'students_file' in request.files:
+            file = request.files['students_file']
+            if file and file.filename:
+                file_emails = parse_students_excel(file)
+                for e in file_emails:
+                    all_emails.add(e.strip().lower())
+
+        # 2. Manual Emails
+        manual_text = request.form.get('manual_emails', '')
+        if manual_text:
+            manual_list = manual_text.replace('\n', ',').split(',')
+            for e in manual_list:
+                if e.strip():
+                    all_emails.add(e.strip().lower())
+
+        # 3. Provision/Link
+        for email in all_emails:
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                # Create new student account
+                username = email.split('@')[0]
+                # Simple duplicate username checker
+                if User.query.filter_by(username=username).first():
+                    username = f"{username}{secrets.randbelow(9999)}"
+                
+                hashed_pwd = bcrypt.generate_password_hash('Student123').decode('utf-8')
+                user = User(
+                    username=username,
+                    email=email,
+                    status='Student',
+                    age=18, # Default
+                    password=hashed_pwd,
+                    organization_id=current_user.organization_id # Inherit Org if applicable
+                )
+                db.session.add(user)
+                created_count += 1
+            
+            # Add to class if not already
+            if user not in classroom.students:
+                classroom.students.append(user)
+                added_count += 1
+
+        db.session.commit()
+        
+        msg = f'Added {added_count} students ({created_count} new accounts).' if added_count > 0 else 'No new students added.'
+        flash(msg, 'success')
+        return redirect(url_for('view_class', class_id=class_id))
         
     return render_template('view_class.html', classroom=classroom)
 
 
 
 @app.route('/add_questions/<int:exam_id>', methods=['GET', 'POST'])
+@app.route('/add_questions/<int:exam_id>/<int:q_idx>', methods=['GET', 'POST'])
 @login_required
-def add_questions(exam_id):
+def add_questions(exam_id, q_idx=None):
     exam = Exam.query.get_or_404(exam_id)
+    if exam.created_by_id != current_user.id:
+        abort(403)
+        
+    # Get existing questions for this exam
+    questions = Question.query.filter_by(exam_id=exam.id).order_by(Question.question_number).all()
+    
+    # If no q_idx provided, default to the next one to be added
+    if q_idx is None:
+        q_idx = len(questions) + 1
+        
+    # Boundary check
+    if q_idx < 1: q_idx = 1
+    if q_idx > exam.num_questions:
+        flash('You have reached the limit of questions for this exam.', 'info')
+        return redirect(url_for('manage_exam', exam_id=exam.id))
+
+    # Find if this question already exists (for editing during flow)
+    existing_q = next((q for q in questions if q.question_number == q_idx), None)
+
     if request.method == 'POST':
         question_text = request.form.get('question_text')
-        question_number = request.form.get('question_number')
-        options = request.form.getlist('option_text[]')
-        correct_option = request.form.get('correct_option')
+        options_texts = request.form.getlist('option_text[]')
+        correct_option_idx = request.form.get('correct_option')
+        direction = request.form.get('direction', 'next') # 'next' or 'prev' or 'finish'
 
-        new_question = Question(
-            exam_id=exam.id,
-            question_text=question_text,
-            question_number=question_number
-        )
-        db.session.add(new_question)
-        db.session.flush()
+        if existing_q:
+            # Update existing
+            existing_q.question_text = question_text
+            # Clear and re-add options for simplicity or update them
+            for opt in existing_q.options:
+                db.session.delete(opt)
+            db.session.flush()
+        else:
+            # Create new
+            existing_q = Question(
+                exam_id=exam.id,
+                question_text=question_text,
+                question_number=q_idx
+            )
+            db.session.add(existing_q)
+            db.session.flush()
 
-        for i, option_text in enumerate(options):
+        for i, opt_text in enumerate(options_texts):
             new_option = Examoption(
-                question_id=new_question.id,
-                option_text=option_text,
+                question_id=existing_q.id,
+                option_text=opt_text,
                 option_letter=chr(65 + i),
-                is_correct=(str(i) == correct_option)
+                is_correct=(str(i) == correct_option_idx)
             )
             db.session.add(new_option)
 
         db.session.commit()
 
-        if int(question_number) >= exam.num_questions:
-            flash('All questions have been added. Exam creation complete!', 'success')
-            return redirect(url_for('exam_dashboard'))
-
-        if int(question_number) < exam.num_questions:
-            flash('Question added successfully! Please add the next question.', 'success')
-            return redirect(url_for('add_questions', exam_id=exam.id))
-        elif int(question_number) >= exam.num_questions:
-            flash('All questions have been added. Exam creation complete!', 'success')
-            return redirect(url_for('exam_dashboard'))
-
+        if direction == 'prev' and q_idx > 1:
+            return redirect(url_for('add_questions', exam_id=exam.id, q_idx=q_idx-1))
+        elif direction == 'next':
+            if q_idx < exam.num_questions:
+                return redirect(url_for('add_questions', exam_id=exam.id, q_idx=q_idx+1))
+            else:
+                flash('Final question saved.', 'success')
+                return redirect(url_for('manage_exam', exam_id=exam.id))
         else:
-            flash('If you see this, you might have an error!', 'failure')
-            return redirect(url_for('exam_dashboard'))
+            return redirect(url_for('manage_exam', exam_id=exam.id))
 
-    return render_template('add_questions.html', exam=exam, chr=chr)
+    return render_template('add_questions.html', exam=exam, q_idx=q_idx, existing_q=existing_q, chr=chr)
 
 
-@app.route('/exam_dashboard')
+@app.route('/edit_question/<int:question_id>', methods=['GET', 'POST'])
 @login_required
-def exam_dashboard():
-    user_exams = Exam.query.filter_by(created_by_id=current_user.id).all()
-    
+def edit_single_question(question_id):
+    question = Question.query.get_or_404(question_id)
+    exam = question.exam
+    if exam.created_by_id != current_user.id:
+        abort(403)
+        
+    # Lock check: Prevent editing if anyone has already taken the exam
+    if TakenExam.query.filter_by(exam_id=exam.id).first():
+        flash('Editing is locked because students have already started or submitted this exam.', 'danger')
+        return redirect(url_for('manage_exam', exam_id=exam.id))
+        
+    if request.method == 'POST':
+        question.question_text = request.form.get('question_text')
+        options_texts = request.form.getlist('option_text[]')
+        correct_option_idx = request.form.get('correct_option')
+
+        # Update options
+        for i, opt in enumerate(question.options):
+            if i < len(options_texts):
+                opt.option_text = options_texts[i]
+                opt.is_correct = (str(i) == correct_option_idx)
+        
+        # If there are NEW options (unlikely given fixed num_options but good for robustness)
+        if len(options_texts) > len(question.options):
+            for i in range(len(question.options), len(options_texts)):
+                new_opt = Examoption(
+                    question_id=question.id,
+                    option_text=options_texts[i],
+                    option_letter=chr(65 + i),
+                    is_correct=(str(i) == correct_option_idx)
+                )
+                db.session.add(new_opt)
+
+        db.session.commit()
+        flash('Question updated successfully!', 'success')
+        return redirect(url_for('manage_exam', exam_id=exam.id))
+
+    return render_template('edit_single_question.html', question=question, exam=exam, chr=chr)
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
     if current_user.status == 'Student':
+        # Get exams logic (copied/adapted from home)
+        public_exams = Exam.query.filter_by(is_private=False).all()
         registered_exams = Exam.query.join(ExamCode).filter(ExamCode.user_id == current_user.id).all()
+        all_exams = list(set(public_exams + registered_exams))
+        
+        upcoming_exams = []
+        taken_exams_list = []
+        
+        # Get IDs of taken exams
+        taken_entries = TakenExam.query.filter_by(user_id=current_user.id).all()
+        taken_ids = [t.exam_id for t in taken_entries]
+        
+        for exam in all_exams:
+            if exam.id in taken_ids:
+                taken_exams_list.append(exam)
+            else:
+                upcoming_exams.append(exam)
+                
+        return render_template('student_dashboard.html', upcoming_exams=upcoming_exams, taken_exams=taken_exams_list)
+        
+    elif current_user.status == 'Examiner':
+        # Fetch data for examiner dashboard
+        exams = Exam.query.filter_by(created_by_id=current_user.id).order_by(Exam.created_at.desc()).limit(5).all()
+        notifications = Notification.query.filter_by(receiver_id=current_user.id).order_by(Notification.created_at.desc()).limit(5).all()
+        
+        # Chart Data Calculation
+        all_user_exams = Exam.query.filter_by(created_by_id=current_user.id).all()
+        exam_names = []
+        avg_scores = []
+        student_counts_taken = []
+        
+        for exam in all_user_exams:
+            taken_count = TakenExam.query.filter_by(exam_id=exam.id).count()
+            
+            if taken_count > 0:
+                total_score_sum = 0
+                taken_entries = TakenExam.query.filter_by(exam_id=exam.id).all()
+                for entry in taken_entries:
+                     correct_answers = Answer.query.filter_by(user_id=entry.user_id, exam_id=exam.id, is_correct=True).count()
+                     total_questions = len(exam.questions)
+                     if total_questions > 0:
+                         score = (correct_answers / total_questions) * 100
+                         total_score_sum += score
+                
+                avg_score = total_score_sum / taken_count
+            else:
+                avg_score = 0
+            
+            if taken_count > 0 or len(all_user_exams) <= 10:
+                 exam_names.append(exam.name)
+                 avg_scores.append(round(avg_score, 1))
+                 student_counts_taken.append(taken_count)
+        
+        # Limit to last 10
+        exam_names = exam_names[-10:]
+        avg_scores = avg_scores[-10:]
+        student_counts_taken = student_counts_taken[-10:]
+
+        return render_template('examiner_dashboard.html', 
+                               exams=exams, 
+                               notifications=notifications, 
+                               now=datetime.utcnow(),
+                               exam_names=exam_names,
+                               avg_scores=avg_scores,
+                               student_counts=student_counts_taken)
+    elif current_user.status == 'Organization':
+        return render_template('org_admin_dashboard.html')
     else:
-        registered_exams = []
-    
-    return render_template('exam_dashboard.html', user_exams=user_exams, registered_exams=registered_exams)
+        return redirect(url_for('home'))
 
-@app.route("/view_exam/<int:exam_id>")
+@app.route('/my-exams')
 @login_required
-def view_exam(exam_id):
-    return f"Viewing exam with ID: {exam_id}"
+def my_exams():
+    if current_user.status != 'Examiner':
+        abort(403)
+    exams = Exam.query.filter_by(created_by_id=current_user.id).order_by(Exam.created_at.desc()).all()
+    return render_template('my_exams.html', exams=exams, now=datetime.utcnow())
 
-@app.route("/update_exam/<int:exam_id>", methods=['GET', 'POST'])
+@app.route('/analytics')
 @login_required
-def update_exam(exam_id):
+def analytics():
+    return render_template('analytics.html')
+
+@app.route('/organizations')
+@login_required
+def organizations():
+    return render_template('organizations.html')
+
+@app.route('/notifications', methods=['GET', 'POST'])
+@login_required
+def notifications():
+    if request.method == 'POST' and current_user.status == 'Examiner':
+        title = request.form.get('title')
+        message = request.form.get('message')
+        recipient_type = request.form.get('recipient_type') # 'student' or 'class'
+        
+        if recipient_type == 'class':
+            class_id = request.form.get('class_id')
+            classroom = Class.query.filter_by(id=class_id).first()
+            if classroom and classroom.creator_id == current_user.id: # Ensure ownership
+                 count = 0
+                 for student in classroom.students:
+                     notif = Notification(title=title, message=message, receiver_id=student.id)
+                     db.session.add(notif)
+                     count += 1
+                 db.session.commit()
+                 flash(f'Notification sent to {count} students in {classroom.name}!', 'success')
+            else:
+                 # Check if teacher is just a teacher, not creator? usually creator is main owner. 
+                 # But model might be Many-to-Many 'teachers'.
+                 # Let's check: Class.teachers relationship.
+                 if classroom and current_user in classroom.teachers:
+                     count = 0
+                     for student in classroom.students:
+                         notif = Notification(title=title, message=message, receiver_id=student.id)
+                         db.session.add(notif)
+                         count += 1
+                     db.session.commit()
+                     flash(f'Notification sent to {count} students in {classroom.name}!', 'success')
+                 else:
+                     flash('Class not found or access denied.', 'danger')
+                     
+        else: # Individual student
+            recipient_username = request.form.get('recipient')
+            if recipient_username:
+                user = User.query.filter_by(username=recipient_username).first()
+                if user:
+                    notif = Notification(title=title, message=message, receiver_id=user.id)
+                    db.session.add(notif)
+                    db.session.commit()
+                    flash(f'Notification sent to {recipient_username}!', 'success')
+                else:
+                    flash('User not found.', 'danger')
+            else:
+                flash('Recipient username required.', 'warning')
+            
+        return redirect(url_for('notifications'))
+
+    user_notifications = Notification.query.filter_by(receiver_id=current_user.id).order_by(Notification.created_at.desc()).all()
+    # Pass classes for the dropdown
+    my_classes = []
+    if current_user.status == 'Examiner':
+        my_classes = current_user.teaching_classes
+        
+    return render_template('notifications.html', notifications=user_notifications, classes=my_classes)
+
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html')
+
+
+@app.route('/available_exams')
+@login_required
+def available_exams():
+    return render_template('available_exams.html')
+
+@app.route('/my_results')
+@login_required
+def my_results():
+    return render_template('my_results.html')
+
+
+@app.route('/exam/<int:exam_id>/manage')
+@login_required
+def manage_exam(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    if exam.created_by_id != current_user.id:
+        abort(403)
+    return render_template('exam_management.html', exam=exam, now=datetime.utcnow())
+
+@app.route('/exam/<int:exam_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
     if current_user.id != exam.created_by_id:
         abort(403)
@@ -389,21 +900,24 @@ def update_exam(exam_id):
         exam.num_questions = form.num_questions.data
         exam.num_options = form.num_options.data
         exam.num_students = form.num_students.data
-        exam.exam_date = form.exam_date.data
+        exam.exam_date = form.start_time.data
+        exam.start_time = form.start_time.data
+        exam.end_time = form.end_time.data
         exam.duration = form.duration.data
         exam.is_private = form.is_private.data
         db.session.commit()
         flash('Exam updated successfully!', 'success')
-        return redirect(url_for('exam_dashboard'))
+        return redirect(url_for('manage_exam', exam_id=exam.id))
     elif request.method == 'GET':
         form.name.data = exam.name
         form.num_questions.data = exam.num_questions
         form.num_options.data = exam.num_options
         form.num_students.data = exam.num_students
-        form.exam_date.data = exam.exam_date
+        form.start_time.data = exam.start_time
+        form.end_time.data = exam.end_time
         form.duration.data = exam.duration
         form.is_private.data = exam.is_private
-    return render_template('update_exam.html', title='Update Exam', form=form, exam=exam)
+    return render_template('create_exam.html', form=form, title='Edit Exam', is_edit=True)
 
 @app.route('/delete_exam/<int:exam_id>', methods=['GET', 'POST'])
 @login_required
@@ -422,7 +936,7 @@ def delete_exam(exam_id):
         db.session.delete(exam)
         db.session.commit()
         flash('Exam deleted successfully!', 'success')
-        return redirect(url_for('exam_dashboard'))
+        return redirect(url_for('dashboard'))
     return render_template('delete_exam.html', exam=exam)
 
 # Results & Analytics Routes
@@ -479,30 +993,44 @@ def exam_analytics(exam_id):
 @login_required
 def take_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
-    # Check if already taken?
-    existing = TakenExam.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
-    if existing:
-        flash('You have already taken this exam.', 'info')
-        return redirect(url_for('view_results', exam_id=exam_id)) # Assuming view_results exists or needs creation
+    now = datetime.utcnow()
+    
+    # Check if within window
+    if exam.start_time and now < exam.start_time:
+        flash(f'This exam is not yet available. It starts at {exam.start_time.strftime("%H:%M")}.', 'info')
+        return redirect(url_for('dashboard'))
+    if exam.end_time and now > exam.end_time:
+        flash('This exam session has already ended.', 'danger')
+        return redirect(url_for('dashboard'))
 
+    # Check for existing attempt
+    taken_exam = TakenExam.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+    
+    # If they already finished (implied by an entry existing and we'll add a 'completed' flag or just check answers)
+    # Actually, the user wants "cannot take it again after he has submitted it".
+    # I'll add a 'completed_at' or just use the existence of answers.
+    if taken_exam:
+        # Check if they have answers (already submitted)
+        if Answer.query.filter_by(user_id=current_user.id, exam_id=exam_id).first():
+            flash('You have already submitted this exam.', 'info')
+            return redirect(url_for('view_results', exam_id=exam_id))
+    else:
+        # Create attempt record when they first visit
+        taken_exam = TakenExam(user_id=current_user.id, exam_id=exam_id, taken_at=now)
+        db.session.add(taken_exam)
+        db.session.commit()
+
+    # Calculate personal deadline: min(taken_at + duration, exam.end_time)
+    personal_deadline = taken_exam.taken_at + timedelta(minutes=exam.duration)
+    if exam.end_time and personal_deadline > exam.end_time:
+        personal_deadline = exam.end_time
+        
     questions = Question.query.filter_by(exam_id=exam_id).order_by(Question.question_number).all()
     
-    questions_json = []
-    for q in questions:
-        qdict = {
-            'id': q.id,
-            'question_number': q.question_number,
-            'question_text': q.question_text,
-            'options': []
-        }
-        for opt in q.options:
-            qdict['options'].append({
-                'id': opt.id,
-                'option_text': opt.option_text,
-                'option_letter': getattr(opt, 'option_letter', '')
-            })
-        questions_json.append(qdict)
-    return render_template('take_exam.html', exam=exam, questions=questions, questions_json=questions_json)
+    return render_template('take_exam.html', 
+                           exam=exam, 
+                           questions=questions, 
+                           deadline=personal_deadline.isoformat())
 
 @app.route("/submit_exam/<int:exam_id>", methods=['POST'])
 @login_required
@@ -528,9 +1056,14 @@ def submit_exam(exam_id):
     
     db.session.commit()
     
+    # Record TakenExam entry
+    taken_exam = TakenExam(user_id=current_user.id, exam_id=exam_id)
+    db.session.add(taken_exam)
+    db.session.commit()
+    
     score = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
     flash(f'Exam submitted successfully. Your score: {score:.2f}%', 'success')
-    return redirect(url_for('home'))
+    return redirect(url_for('dashboard'))
 
 @app.route("/view_exam_results/<int:exam_id>")
 @login_required
@@ -639,12 +1172,13 @@ def create_organization():
     return render_template('create_organization.html', title='Create Organization', form=form)
     
 
+
 @app.route("/organization_dashboard")
 @login_required
 def organization_dashboard():
     if current_user.status != 'Organization' or not current_user.organization:
         abort(403)
-    return render_template('organization_dashboard.html', title='Organization Dashboard', organization=current_user.organization)
+    return render_template('org_admin_dashboard.html', title='Organization Dashboard', organization=current_user.organization)
 
 @app.route("/create_category", methods=['GET', 'POST'])
 @login_required

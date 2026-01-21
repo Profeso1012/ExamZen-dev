@@ -1,0 +1,105 @@
+{% extends "dashboard_layout.html" %}
+{% block title %}Manage Exam: {{ exam.name }}{% endblock %}
+{% block header %}Manage Exam{% endblock %}
+
+<style>
+    .question-row-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        border-bottom: 1px solid #eee;
+    }
+
+    .question-row-link:last-of-type {
+        border-bottom: none;
+    }
+
+    .question-row-hover {
+        padding: 15px;
+        transition: background 0.2s;
+    }
+
+    .question-row-hover:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+
+    .correct-opt {
+        color: var(--secondary-color);
+        font-weight: bold;
+    }
+</style>
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="font-size: 0.85rem;">← Back to Dashboard</a>
+</div>
+
+<div class="metrics-grid">
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+            <span>{{ exam.name }}</span>
+            <div>
+                <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn btn-outline"
+                    style="margin-right: 5px;">Edit Details</a>
+                <a href="{{ url_for('delete_exam', exam_id=exam.id) }}" class="btn btn-danger">Delete Exam</a>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.95rem;">
+            <div>
+                <p><strong>Date:</strong> {{ exam.exam_date }}</p>
+                <p><strong>Time:</strong> {{ exam.start_time.strftime('%H:%M') }} - {{ exam.end_time.strftime('%H:%M')
+                    }}</p>
+                <p><strong>Duration:</strong> {{ exam.duration }} mins</p>
+            </div>
+            <div>
+                <p><strong>Questions:</strong> {{ exam.questions|length }} / {{ exam.num_questions }}</p>
+                <p><strong>Students Enrolled:</strong> {{ exam.num_students }}</p>
+                <p><strong>Status:</strong>
+                    {% if exam.start_time > now %}
+                    <span style="color: #F29D00;">Upcoming</span>
+                    {% elif exam.end_time < now %} <span style="color: #666;">Closed</span>
+                        {% else %}
+                        <span style="color: #00ED64;">Active</span>
+                        {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Quick Actions</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <a href="{{ url_for('add_questions', exam_id=exam.id) }}" class="btn btn-primary">Add Questions Manually</a>
+            <a href="{{ url_for('import_questions', exam_id=exam.id) }}" class="btn btn-outline">Import via
+                CSV/Excel</a>
+            <a href="{{ url_for('exam_analytics', exam_id=exam.id) }}" class="btn btn-outline">View Results &
+                Analytics</a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Questions Preview</div>
+    {% if exam.questions %}
+    <div style="max-height: 400px; overflow-y: auto;">
+        {% for q in exam.questions %}
+        <a href="{{ url_for('edit_single_question', question_id=q.id) }}" class="question-row-link">
+            <div class="question-row-hover">
+                <div style="font-weight: 500;">Q{{ q.question_number }}. {{ q.question_text }}</div>
+                <div style="margin-left: 20px; font-size: 0.9rem; color: #666;">
+                    {% for opt in q.options %}
+                    <span class="{% if opt.is_correct %}correct-opt{% endif %}">
+                        {{ opt.option_letter }}) {{ opt.option_text }}
+                    </span>
+                    {% if not loop.last %} | {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: #666;">No questions added yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
