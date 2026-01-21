@@ -28,6 +28,61 @@
         color: var(--secondary-color);
         font-weight: bold;
     }
+
+    /* Container for each question card */
+    .question-card {
+        display: block;
+        text-decoration: none !important;
+        /* Force remove underline */
+        color: #333 !important;
+        /* Force standard text color */
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 16px;
+        transition: all 0.2s ease-in-out;
+        background-color: #fff;
+    }
+
+    /* Hover effect: Subtle lift and shadow */
+    .question-card:hover {
+        background-color: #fcfcfc;
+        border-color: #ccc;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        cursor: pointer;
+    }
+
+    /* Active/Click feedback */
+    .question-card:active {
+        transform: translateY(0);
+        background-color: #f0f0f0;
+    }
+
+    .question-text {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .options-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 0.9rem;
+        color: #555;
+    }
+
+    /* Highlight the correct option */
+    .option-item.is-correct {
+        color: #28a745;
+        /* Success Green */
+        font-weight: 700;
+        background-color: #e8f5e9;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
 </style>
 {% block content %}
 <div style="margin-bottom: 20px;">
@@ -80,26 +135,29 @@
 
 <div class="card">
     <div class="card-header">Questions Preview</div>
+
     {% if exam.questions %}
-    <div style="max-height: 400px; overflow-y: auto;">
+    <div style="max-height: 500px; overflow-y: auto; padding: 10px;">
         {% for q in exam.questions %}
-        <a href="{{ url_for('edit_single_question', question_id=q.id) }}" class="question-row-link">
-            <div class="question-row-hover">
-                <div style="font-weight: 500;">Q{{ q.question_number }}. {{ q.question_text }}</div>
-                <div style="margin-left: 20px; font-size: 0.9rem; color: #666;">
-                    {% for opt in q.options %}
-                    <span class="{% if opt.is_correct %}correct-opt{% endif %}">
-                        {{ opt.option_letter }}) {{ opt.option_text }}
-                    </span>
-                    {% if not loop.last %} | {% endif %}
-                    {% endfor %}
-                </div>
+        <a href="{{ url_for('edit_single_question', question_id=q.id) }}" class="question-card">
+
+            <span class="question-text">
+                Q{{ q.question_number }}. {{ q.question_text }}
+            </span>
+
+            <div class="options-grid">
+                {% for opt in q.options %}
+                <span class="option-item {% if opt.is_correct %}is-correct{% endif %}">
+                    {{ opt.option_letter }}) {{ opt.option_text }}
+                </span>
+                {% endfor %}
             </div>
+
         </a>
         {% endfor %}
     </div>
     {% else %}
-    <p style="color: #666;">No questions added yet.</p>
+    <p style="padding: 20px; color: #666; text-align: center;">No questions added yet.</p>
     {% endif %}
 </div>
 {% endblock %}
