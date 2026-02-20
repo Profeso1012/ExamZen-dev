@@ -533,6 +533,15 @@ def classes():
         my_classes = current_user.teaching_classes
         return render_template('classes_teacher.html', classes=my_classes, form=form)
 
+@app.route('/classes/student')
+@login_required
+def classes_student():
+    """Separate route for students to view their classes"""
+    if current_user.status != 'Student':
+        return redirect(url_for('classes'))
+    my_classes = current_user.enrolled_classes
+    return render_template('classes_student.html', classes=my_classes)
+
 @app.route('/class/<int:class_id>', methods=['GET', 'POST'])
 @login_required
 def view_class(class_id):

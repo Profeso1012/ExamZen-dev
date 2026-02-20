@@ -42,9 +42,40 @@
                         up</a>
                     {% endif %}
                 </div>
+
+                <!-- Mobile Menu Toggle -->
+                <div class="mobile-menu-toggle" onclick="toggleMobileNav()">
+                    <i class="fas fa-bars"></i>
+                </div>
             </div>
         </div>
     </nav>
+
+    <!-- Mobile Navigation Panel -->
+    <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="closeMobileNav()"></div>
+    <div class="mobile-nav-panel" id="mobileNavPanel">
+        <div class="mobile-nav-header">
+            <span class="brand-text">ExamZen</span>
+            <button class="mobile-nav-close" onclick="closeMobileNav()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mobile-nav-links">
+            <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">Home</a>
+            <a href="{{ url_for('about') }}" class="{% if request.endpoint == 'about' %}active{% endif %}">About</a>
+            {% if current_user.is_authenticated %}
+                {% if current_user.status == 'Student' or current_user.status|string == 'Student' or current_user.status.name == 'Student' %}
+                <a href="{{ url_for('home') }}">Dashboard</a>
+                {% elif current_user.status == 'Examiner' or current_user.status|string == 'Examiner' or current_user.status.name == 'Examiner' %}
+                <a href="{{ url_for('dashboard') }}">Teacher Hub</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}">Log out</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Log in</a>
+                <a href="{{ url_for('register') }}">Sign up</a>
+            {% endif %}
+        </div>
+    </div>
 
     <!-- Flash Messages -->
     <div class="container flash-container">
@@ -139,6 +170,22 @@
 
     <!-- Custom Scripts -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Mobile Navigation Toggle
+        function toggleMobileNav() {
+            const panel = document.getElementById('mobileNavPanel');
+            const overlay = document.getElementById('mobileNavOverlay');
+            panel.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        function closeMobileNav() {
+            const panel = document.getElementById('mobileNavPanel');
+            const overlay = document.getElementById('mobileNavOverlay');
+            panel.classList.remove('open');
+            overlay.classList.remove('open');
+        }
+    </script>
 </body>
 
 </html>

@@ -1,14 +1,14 @@
 :root {
-    --primary-color: #6B46C1;
+    --primary-color: #2D1B69;
     /* Deep Purple */
-    --secondary-color: #F6AD55;
-    /* Warm Gold */
+    --secondary-color: #FFD700;
+    /* Gold */
     --bg-color: #F7FAFC;
     --text-color: #2D3748;
     --border-color: #E2E8F0;
     --sidebar-width: 240px;
     --header-height: 60px;
-    --card-shadow: 0 4px 10px rgba(107, 70, 193, 0.08);
+    --card-shadow: 0 4px 10px rgba(45, 27, 105, 0.08);
 }
 
 body {
@@ -25,8 +25,8 @@ body {
 /* Sidebar */
 .sidebar {
     width: var(--sidebar-width);
-    background-color: #F0F5F6;
-    /* Light grey/greenish tint */
+    background-color: var(--primary-color);
+    /* Changed to purple */
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -36,6 +36,7 @@ body {
     top: 0;
     z-index: 100;
     transition: transform 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar-header {
@@ -43,10 +44,11 @@ body {
     display: flex;
     align-items: center;
     padding: 0 20px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     font-weight: bold;
     font-size: 1.2rem;
-    color: var(--primary-color);
+    color: var(--secondary-color);
+    /* Gold text */
 }
 
 .sidebar-content {
@@ -59,18 +61,25 @@ body {
     display: flex;
     align-items: center;
     padding: 10px 20px;
-    color: #465C6E;
+    color: rgba(255, 255, 255, 0.8);
+    /* Light text */
     text-decoration: none;
     font-size: 0.95rem;
-    transition: background 0.2s, color 0.2s;
+    transition: all 0.3s ease;
     cursor: pointer;
 }
 
-.nav-item:hover,
+.nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: scale(1.05);
+}
+
 .nav-item.active {
-    background-color: #E3E8EA;
-    color: var(--primary-color);
+    background-color: rgba(255, 215, 0, 0.2);
+    color: var(--secondary-color);
     border-left: 3px solid var(--secondary-color);
+    text-decoration: underline;
 }
 
 .nav-item svg {
@@ -286,9 +295,15 @@ tr:hover td {
 }
 
 /* Mobile Responsive */
+.mobile-toggle {
+    display: none;
+    cursor: pointer;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
+        z-index: 1000;
     }
 
     .sidebar.open {
@@ -302,10 +317,111 @@ tr:hover td {
     .mobile-toggle {
         display: block;
         margin-right: 15px;
-        cursor: pointer;
+    }
+
+    .header-left h1 {
+        font-size: 1rem;
+    }
+
+    .content-area {
+        padding: 20px 15px;
+    }
+
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+    }
+
+    .card {
+        padding: 15px;
+    }
+
+    table {
+        font-size: 0.85rem;
+    }
+
+    th,
+    td {
+        padding: 8px 10px;
     }
 }
 
-.mobile-toggle {
-    display: none;
+/* Tablet Responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/
+* Button Color Theme Updates */
+.btn-success,
+.btn-info {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-success:hover,
+.btn-info:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.btn-warning {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: var(--primary-color);
+}
+
+.btn-warning:hover {
+    background-color: #E6C200;
+    border-color: #E6C200;
+}
+
+/* Chart Colors - Purple & Gold Theme */
+.chart-purple {
+    color: var(--primary-color);
+}
+
+.chart-gold {
+    color: var(--secondary-color);
+}
+
+/* Form Elements Theme */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(45, 27, 105, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Links */
+a {
+    color: var(--primary-color);
+}
+
+a:hover {
+    color: var(--primary-light);
+}
+
+/* Badge Colors */
+.badge-success {
+    background-color: var(--primary-color);
+}
+
+.badge-warning {
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+}
+
+.badge-info {
+    background-color: var(--primary-light);
 }

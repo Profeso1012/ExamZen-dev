@@ -453,8 +453,9 @@
     /* Responsive */
     @media (max-width: 768px) {
         .elegant-stepper-nav {
-            flex-direction: column;
-            gap: 20px;
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 15px !important;
         }
 
         .stepper-progress-wrapper {
@@ -462,29 +463,76 @@
         }
 
         .elegant-step-item {
-            flex-direction: row;
-            justify-content: flex-start;
-            text-align: left;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
         }
 
         .step-number {
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-            margin-right: 15px;
-            margin-bottom: 0;
+            width: 45px;
+            height: 45px;
+            font-size: 18px;
+            margin-right: 0;
+            margin-bottom: 8px;
+        }
+
+        .step-label {
+            text-align: center;
+        }
+
+        .step-title {
+            font-size: 14px;
+        }
+
+        .step-desc {
+            font-size: 11px;
         }
 
         .elegant-stepper-content {
-            padding: 30px 20px;
+            padding: 25px 15px;
+            min-height: 300px;
         }
 
         .step-content-title {
-            font-size: 24px;
+            font-size: 20px;
         }
 
         .step-content-text {
-            font-size: 16px;
+            font-size: 14px;
+        }
+
+        .step-icon-wrapper {
+            width: 70px;
+            height: 70px;
+            margin-bottom: 20px;
+        }
+
+        .step-icon-wrapper i {
+            font-size: 32px;
+        }
+
+        .feature-item {
+            padding: 10px 15px;
+        }
+
+        .feature-item span {
+            font-size: 14px;
+        }
+    }
+
+    /* Stats Section Mobile */
+    @media (max-width: 768px) {
+        .stats-section {
+            padding: 60px 0 !important;
+            height: auto !important;
+        }
+
+        .stats-section .col-md-4 h2 {
+            font-size: 2.5rem !important;
+        }
+
+        .stats-section .col-md-4 p {
+            font-size: 1rem !important;
         }
     }
 </style>
