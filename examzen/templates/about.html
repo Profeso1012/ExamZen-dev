@@ -39,9 +39,9 @@
 <!-- ============================================================
      REST OF PAGE  (unchanged)
      ============================================================ -->
-<div class="container py-5">
+<div class="container py-2">
     <!-- How It Works -->
-    <div class="mb-5 hiw-section">
+    <div class="mb-2 hiw-section">
         <h2 class="text-center font-weight-bold mb-4 section-heading">How It Works</h2>
         <p class="text-center text-muted section-subheading">From
             creating your first exam to analyzing detailed results, our streamlined process makes online assessment
@@ -359,12 +359,19 @@
 .section-heading {
     font-size: 3rem;
     padding-top: 2.2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
 }
 .section-subheading {
     font-size: 1.25rem;
-    max-width: 700px;
-    margin: 0 auto 3rem;
+    max-width: 580px;
+    margin: 0 auto 1.25rem;
     display: block;
+    padding-left: 2rem;
+    padding-right: 2rem;
 }
 
 /* =============================================================
@@ -373,8 +380,8 @@
 .stats-section {
     background: linear-gradient(135deg, #2D1B69, #6f42c1);
     color: white;
-    padding: 6rem 0;
-    margin-top: 5rem;
+    padding: 3.5rem 0;
+    margin-top: 2rem;
 }
 .stats-row {
     display: flex !important;
@@ -552,10 +559,10 @@
         margin-bottom: 1.25rem !important;
     }
 
-    .stats-section { padding: 2.5rem 0 !important; margin-top: 2rem !important; }
-    .stats-col { padding: 0 1.5% !important; }
-    .stats-number { font-size: clamp(1rem, 4.8vw, 1.5rem) !important; word-break: break-all; }
-    .stats-label { font-size: clamp(0.58rem, 2.6vw, 0.78rem) !important; margin-top: 0.25rem !important; }
+    .stats-section { padding: 2rem 0 !important; margin-top: 1.25rem !important; }
+    .stats-col { padding: 0 0.5% !important; }
+    .stats-number { font-size: clamp(1.25rem, 5.5vw, 1.8rem) !important; word-break: break-all; }
+    .stats-label { font-size: clamp(0.72rem, 3vw, 0.95rem) !important; margin-top: 0.25rem !important; }
 
     .elegant-stepper-nav {
         display: grid !important;
@@ -593,9 +600,9 @@
 @media (max-width: 440px) {
     .section-heading    { font-size: clamp(1.15rem, 5vw, 1.5rem) !important; }
     .section-subheading { font-size: clamp(0.68rem, 3vw, 0.82rem) !important; }
-    .stats-col  { padding: 0 1% !important; }
-    .stats-number { font-size: clamp(0.9rem, 4.2vw, 1.2rem) !important; }
-    .stats-label  { font-size: clamp(0.52rem, 2.3vw, 0.7rem) !important; }
+    .stats-col  { padding: 0 0.4% !important; }
+    .stats-number { font-size: clamp(1.1rem, 5vw, 1.5rem) !important; }
+    .stats-label  { font-size: clamp(0.65rem, 2.8vw, 0.88rem) !important; }
     .step-number {
         width: clamp(1.7rem, 7vw, 2.2rem) !important;
         height: clamp(1.7rem, 7vw, 2.2rem) !important;
