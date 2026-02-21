@@ -10,117 +10,102 @@
 
         <form method="POST" action="" class="auth-form" id="registerForm">
             {{ form.hidden_tag() }}
-            <!-- Hidden field for registration type -->
             {{ form.registration_type(class="d-none") }}
 
             <!-- Registration Type Toggle -->
-            <div class="btn-group w-100 mb-4" role="group" aria-label="Registration Type">
+            <div class="btn-group w-100 mb-4 reg-toggle-group" role="group" aria-label="Registration Type">
                 <button type="button" class="btn btn-outline-primary active" id="btn-individual">Individual</button>
                 <button type="button" class="btn btn-outline-primary" id="btn-org">Organization</button>
             </div>
 
-            <!-- Organization Name Field (Hidden by default) -->
-            <div class="form-group mb-3" id="org-name-group" style="display: none;">
+            <!-- Organization Name Field -->
+            <div class="form-group reg-form-group" id="org-name-group" style="display: none;">
                 {{ form.organization_name.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                 {% if form.organization_name.errors %}
                 {{ form.organization_name(class="form-control is-invalid") }}
                 <div class="invalid-feedback">
-                    {% for error in form.organization_name.errors %}
-                    <span>{{ error }}</span>
-                    {% endfor %}
+                    {% for error in form.organization_name.errors %}<span>{{ error }}</span>{% endfor %}
                 </div>
                 {% else %}
                 {{ form.organization_name(class="form-control") }}
                 {% endif %}
             </div>
 
-            <!-- Individual: Username -->
-            <div class="form-group mb-3" id="username-group">
+            <!-- Username -->
+            <div class="form-group reg-form-group" id="username-group">
                 {{ form.username.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                 {% if form.username.errors %}
                 {{ form.username(class="form-control is-invalid") }}
                 <div class="invalid-feedback">
-                    {% for error in form.username.errors %}
-                    <span>{{ error }}</span>
-                    {% endfor %}
+                    {% for error in form.username.errors %}<span>{{ error }}</span>{% endfor %}
                 </div>
                 {% else %}
                 {{ form.username(class="form-control") }}
                 {% endif %}
             </div>
 
-            <!-- Common: Email -->
-            <div class="form-group mb-3">
+            <!-- Email -->
+            <div class="form-group reg-form-group">
                 {{ form.email.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                 {% if form.email.errors %}
                 {{ form.email(class="form-control is-invalid") }}
                 <div class="invalid-feedback">
-                    {% for error in form.email.errors %}
-                    <span>{{ error }}</span>
-                    {% endfor %}
+                    {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
                 </div>
                 {% else %}
                 {{ form.email(class="form-control") }}
                 {% endif %}
             </div>
 
-            <!-- Individual: Age & Status -->
-            <div class="row" id="individual-extra-group">
-                <div class="col-md-6 form-group mb-3">
+            <!-- Age & Status -->
+            <div class="row reg-inline-row" id="individual-extra-group">
+                <div class="col-md-6 form-group reg-form-group">
                     {{ form.age.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.age.errors %}
                     {{ form.age(class="form-control is-invalid") }}
                     <div class="invalid-feedback">
-                        {% for error in form.age.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
+                        {% for error in form.age.errors %}<span>{{ error }}</span>{% endfor %}
                     </div>
                     {% else %}
                     {{ form.age(class="form-control") }}
                     {% endif %}
                 </div>
-                <div class="col-md-6 form-group mb-3">
+                <div class="col-md-6 form-group reg-form-group">
                     {{ form.status.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.status.errors %}
                     {{ form.status(class="form-control is-invalid") }}
                     <div class="invalid-feedback">
-                        {% for error in form.status.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
+                        {% for error in form.status.errors %}<span>{{ error }}</span>{% endfor %}
                     </div>
                     {% else %}
                     {{ form.status(class="form-control") }}
                     {% endif %}
                 </div>
-                <div class="col-12">
-                    <small class="form-text text-muted">Select "Examiner" to create exams, "Student" to take
-                        exams.</small>
+                <!-- hint text — moved outside the col so it spans full width cleanly -->
+                <div class="col-12 reg-hint">
+                    <small class="form-text text-muted">Select "Examiner" to create exams, "Student" to take exams.</small>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6 form-group mb-4">
+            <!-- Password row -->
+            <div class="row reg-inline-row">
+                <div class="col-md-6 form-group reg-form-group">
                     {{ form.password.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.password.errors %}
                     {{ form.password(class="form-control is-invalid") }}
                     <div class="invalid-feedback">
-                        {% for error in form.password.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
+                        {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
                     </div>
                     {% else %}
                     {{ form.password(class="form-control") }}
                     {% endif %}
                 </div>
-                <div class="col-md-6 form-group mb-4">
-                    {{ form.confirm_password.label(class="form-label text-muted small text-uppercase font-weight-bold")
-                    }}
+                <div class="col-md-6 form-group reg-form-group">
+                    {{ form.confirm_password.label(class="form-label text-muted small text-uppercase font-weight-bold") }}
                     {% if form.confirm_password.errors %}
                     {{ form.confirm_password(class="form-control is-invalid") }}
                     <div class="invalid-feedback">
-                        {% for error in form.confirm_password.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
+                        {% for error in form.confirm_password.errors %}<span>{{ error }}</span>{% endfor %}
                     </div>
                     {% else %}
                     {{ form.confirm_password(class="form-control") }}
@@ -128,14 +113,13 @@
                 </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group reg-submit-group">
                 {{ form.submit(class="btn btn-auth-primary btn-block", value="Sign Up") }}
             </div>
 
             <div class="text-center mt-3">
                 <small class="text-muted">
-                    Already have an account? <a href="{{ url_for('login') }}" class="font-weight-bold text-primary">Log
-                        In</a>
+                    Already have an account? <a href="{{ url_for('login') }}" class="font-weight-bold text-primary">Log In</a>
                 </small>
             </div>
         </form>
@@ -143,15 +127,117 @@
 
     <!-- Right Side Visual -->
     <div class="auth-right animate__animated animate__fadeInRight">
-        <img src="{{ url_for('static', filename='images/auth_illustration.png') }}" class="auth-right-bg"
-            alt="Abstract Background">
+        <img src="{{ url_for('static', filename='images/auth_illustration.png') }}" class="auth-right-bg" alt="Abstract Background">
         <div class="auth-right-content">
             <h2 class="mb-3">Start Your Journey</h2>
-            <p class="lead" style="font-size: 1.1rem; opacity: 0.9;">Create exams, manage classes, and analyze
-                performance effortlessly.</p>
+            <p class="lead" style="font-size: 1.1rem; opacity: 0.9;">Create exams, manage classes, and analyze performance effortlessly.</p>
         </div>
     </div>
 </div>
+
+<!-- =============================================
+     REGISTER PAGE — MOBILE ONLY FIXES
+     Only targets ≤ 768px, desktop untouched
+     ============================================= -->
+<style>
+@media (max-width: 768px) {
+
+    /* Auth left panel: tighter padding, allow scroll */
+    .auth-left {
+        padding: 24px 18px !important;
+        overflow-y: auto;
+        justify-content: flex-start !important; /* don't centre-lock so it scrolls naturally */
+    }
+
+    /* Header: less bottom gap */
+    .auth-header {
+        margin-bottom: 18px !important;
+    }
+    .auth-title {
+        font-size: clamp(1.4rem, 6vw, 1.8rem) !important;
+        margin-bottom: 4px !important;
+    }
+    .auth-subtitle {
+        font-size: 0.85rem !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Toggle buttons: tighter bottom margin */
+    .reg-toggle-group {
+        margin-bottom: 18px !important;
+        display: flex !important;
+        gap: 8px;
+    }
+    .reg-toggle-group .btn {
+        flex: 1;
+        padding: 8px 14px !important;
+        font-size: 0.88rem !important;
+        border-radius: 8px !important;
+    }
+
+    /* Every form group: cut vertical gap */
+    .auth-form .reg-form-group,
+    .auth-form .form-group {
+        margin-bottom: 14px !important;
+    }
+
+    /* Labels: tighter */
+    .auth-form .form-label {
+        margin-bottom: 6px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Inputs: less internal padding */
+    .auth-form .form-control {
+        padding: 8px 12px !important;
+        font-size: 0.9rem !important;
+        border-radius: 8px !important;
+    }
+
+    /* Age + Status row:
+       On mobile make them sit side by side (50/50) with
+       no negative-margin bleed. The key fix: override
+       the global .row negative margins. */
+    .reg-inline-row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Each half-width col inside the row */
+    .reg-inline-row > .col-md-6 {
+        /* stays at 50% on mobile too — side by side */
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+
+    /* The hint text col — full width, no bleed */
+    .reg-hint {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        padding: 0 4px !important;
+        margin-top: 2px !important;
+        margin-bottom: 14px !important;
+    }
+    .reg-hint small {
+        font-size: 0.78rem !important;
+        line-height: 1.4;
+        display: block;
+    }
+
+    /* Submit button gap */
+    .reg-submit-group {
+        margin-top: 8px !important;
+        margin-bottom: 0 !important;
+    }
+
+    .btn-auth-primary {
+        padding: 11px !important;
+        font-size: 0.95rem !important;
+    }
+}
+</style>
 
 <script>
     const btnIndividual = document.getElementById('btn-individual');
@@ -163,34 +249,20 @@
     const orgNameGroup = document.getElementById('org-name-group');
 
     btnIndividual.addEventListener('click', function () {
-        // Update UI
         btnIndividual.classList.add('active');
         btnOrg.classList.remove('active');
-
-        // Show Individual Fields
-        individualGroup.style.display = 'flex'; // row
+        individualGroup.style.display = 'flex';
         usernameGroup.style.display = 'block';
-
-        // Hide Org Fields
         orgNameGroup.style.display = 'none';
-
-        // Update Hidden Input
         registrationTypeInput.value = 'individual';
     });
 
     btnOrg.addEventListener('click', function () {
-        // Update UI
         btnOrg.classList.add('active');
         btnIndividual.classList.remove('active');
-
-        // Hide Individual Fields
         individualGroup.style.display = 'none';
         usernameGroup.style.display = 'none';
-
-        // Show Org Fields
         orgNameGroup.style.display = 'block';
-
-        // Update Hidden Input
         registrationTypeInput.value = 'organization';
     });
 </script>

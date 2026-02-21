@@ -2,11 +2,11 @@
 {% extends "layout.html" %}
 {% block content %}
 <!-- Remove.bg Style Hero (Purple Theme) -->
-<header class="remove-hero purple-theme">
+<header class="remove-hero purple-theme about-hero-section">
     <div class="container">
         <div class="remove-hero-wrapper align-items-center">
             <!-- Left: Image -->
-            <div class="hero-left-section" style="flex: 1;">
+            <div class="hero-left-section about-hero-img-wrap">
                 <div class="hero-media-container shadow-lg">
                     <img src="{{ url_for('static', filename='images/landing_3d.png') }}" class="hero-media-preview"
                         alt="ExamZen Preview">
@@ -14,11 +14,11 @@
             </div>
 
             <!-- Right: Bold Text -->
-            <div class="hero-right-section text-left pl-lg-5" style="flex: 1;">
-                <h1 class="hero-main-title text-white mb-4" style="font-size: 3.5rem; line-height: 1.1;">
+            <div class="hero-right-section about-hero-text">
+                <h1 class="hero-main-title text-white mb-4 about-hero-title">
                     Empowering<br>Education<br>Globally
                 </h1>
-                <p class="hero-sub-text text-light-purple mb-4" style="font-size: 1.25rem;">
+                <p class="hero-sub-text text-light-purple mb-4 about-hero-sub">
                     Building the future of secure and intelligent assessments.
                     Join thousands of educators transforming their testing experience today.
                 </p>
@@ -28,10 +28,10 @@
 </header>
 
 <div class="container py-5">
-    <!-- Enhanced Interactive How It Works -->
-    <div class="mb-5 pt-5">
-        <h2 class="text-center font-weight-bold mb-4" style="font-size: 3rem; padding-top: 35px;">How It Works</h2>
-        <p class="text-center text-muted mb-5" style="font-size: 1.25rem; max-width: 700px; margin: 0 auto 3rem;">From
+    <!-- How It Works -->
+    <div class="mb-5 hiw-section">
+        <h2 class="text-center font-weight-bold mb-4 section-heading">How It Works</h2>
+        <p class="text-center text-muted section-subheading">From
             creating your first exam to analyzing detailed results, our streamlined process makes online assessment
             effortless and efficient</p>
 
@@ -45,40 +45,28 @@
             <!-- Nav -->
             <div class="elegant-stepper-nav">
                 <div class="elegant-step-item active" onclick="showElegantStep(0)">
-                    <div class="step-number">
-                        <span>1</span>
-                        <div class="step-pulse"></div>
-                    </div>
+                    <div class="step-number"><span>1</span><div class="step-pulse"></div></div>
                     <div class="step-label">
                         <div class="step-title">Create</div>
                         <div class="step-desc">Build your exam</div>
                     </div>
                 </div>
                 <div class="elegant-step-item" onclick="showElegantStep(1)">
-                    <div class="step-number">
-                        <span>2</span>
-                        <div class="step-pulse"></div>
-                    </div>
+                    <div class="step-number"><span>2</span><div class="step-pulse"></div></div>
                     <div class="step-label">
                         <div class="step-title">Organize</div>
                         <div class="step-desc">Manage classes</div>
                     </div>
                 </div>
                 <div class="elegant-step-item" onclick="showElegantStep(2)">
-                    <div class="step-number">
-                        <span>3</span>
-                        <div class="step-pulse"></div>
-                    </div>
+                    <div class="step-number"><span>3</span><div class="step-pulse"></div></div>
                     <div class="step-label">
                         <div class="step-title">Take</div>
                         <div class="step-desc">Student experience</div>
                     </div>
                 </div>
                 <div class="elegant-step-item" onclick="showElegantStep(3)">
-                    <div class="step-number">
-                        <span>4</span>
-                        <div class="step-pulse"></div>
-                    </div>
+                    <div class="step-number"><span>4</span><div class="step-pulse"></div></div>
                     <div class="step-label">
                         <div class="step-title">Analyze</div>
                         <div class="step-desc">Get insights</div>
@@ -90,142 +78,147 @@
             <div class="elegant-stepper-content">
                 <div class="elegant-step-pane active" id="elegant-step-0">
                     <div class="step-content-wrapper">
-                        <div class="step-icon-wrapper">
-                            <i class="fas fa-plus-circle"></i>
-                        </div>
+                        <div class="step-icon-wrapper"><i class="fas fa-plus-circle"></i></div>
                         <h3 class="step-content-title">Create Assessments</h3>
                         <p class="step-content-text">Use our powerful exam builder or simply upload an Excel file to
-                            generate
-                            questions instantly. Support for multiple choice, true/false, and essay questions.</p>
+                            generate questions instantly. Support for multiple choice, true/false, and essay questions.</p>
                         <div class="step-feature-list">
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Drag-and-drop question builder</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Bulk import from Excel/CSV</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Question bank library</span>
-                            </div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Drag-and-drop question builder</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Bulk import from Excel/CSV</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Question bank library</span></div>
                         </div>
                     </div>
                 </div>
                 <div class="elegant-step-pane" id="elegant-step-1">
                     <div class="step-content-wrapper">
-                        <div class="step-icon-wrapper">
-                            <i class="fas fa-users-cog"></i>
-                        </div>
+                        <div class="step-icon-wrapper"><i class="fas fa-users-cog"></i></div>
                         <h3 class="step-content-title">Organize Classes</h3>
                         <p class="step-content-text">Group students into classes for easy assignment. Send notifications
-                            and manage
-                            private exams with granular access control.</p>
+                            and manage private exams with granular access control.</p>
                         <div class="step-feature-list">
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Create unlimited classes</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Bulk student enrollment</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Automated notifications</span>
-                            </div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Create unlimited classes</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Bulk student enrollment</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Automated notifications</span></div>
                         </div>
                     </div>
                 </div>
                 <div class="elegant-step-pane" id="elegant-step-2">
                     <div class="step-content-wrapper">
-                        <div class="step-icon-wrapper">
-                            <i class="fas fa-laptop-code"></i>
-                        </div>
+                        <div class="step-icon-wrapper"><i class="fas fa-laptop-code"></i></div>
                         <h3 class="step-content-title">Take Exams</h3>
                         <p class="step-content-text">Students enjoy a modern, distraction-free interface with
-                            auto-submission,
-                            progress tracking, and seamless navigation between questions.</p>
+                            auto-submission, progress tracking, and seamless navigation between questions.</p>
                         <div class="step-feature-list">
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Clean, minimal interface</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Auto-save progress</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Tab-switch detection</span>
-                            </div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Clean, minimal interface</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Auto-save progress</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Tab-switch detection</span></div>
                         </div>
                     </div>
                 </div>
                 <div class="elegant-step-pane" id="elegant-step-3">
                     <div class="step-content-wrapper">
-                        <div class="step-icon-wrapper">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
+                        <div class="step-icon-wrapper"><i class="fas fa-chart-line"></i></div>
                         <h3 class="step-content-title">Analyze Results</h3>
                         <p class="step-content-text">View detailed performance analytics immediately after the exam.
-                            Identify trends,
-                            monitor progress, and export comprehensive reports.</p>
+                            Identify trends, monitor progress, and export comprehensive reports.</p>
                         <div class="step-feature-list">
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Instant automated grading</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Performance analytics</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Export to PDF/Excel</span>
-                            </div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Instant automated grading</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Performance analytics</span></div>
+                            <div class="feature-item"><i class="fas fa-check-circle"></i><span>Export to PDF/Excel</span></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-
 </div>
 
-<!-- Stats Section (Full Width) -->
-<section class="stats-section"
-    style="background: linear-gradient(135deg, #2D1B69, #6f42c1); color: white; padding: 100px 0; margin-top: 80px; height: 300px;">
+<!-- Stats Section -->
+<section class="stats-section">
     <div class="container">
-        <div class="row align-items-center" style="min-height: 120px;">
-            <div class="col-md-4 text-center mb-4 mb-md-0">
-                <h2 class="font-weight-bold text-warning" style="font-size: 3.5rem; color: white;">10k+</h2>
-                <p class="text-white" style="font-size: 1.2rem; margin-top: 10px;">Exams Taken</p>
+        <!-- inline display/flex-wrap are the nuclear fallback so nothing external can break the row -->
+        <div class="stats-row" style="display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;">
+            <div class="stats-col" style="flex:1 1 0;min-width:0;text-align:center;">
+                <div class="stats-number">10k+</div>
+                <p class="stats-label">Exams Taken</p>
             </div>
-            <div class="col-md-4 text-center mb-4 mb-md-0">
-                <h2 class="font-weight-bold text-warning" style="font-size: 3.5rem; color: white;">500+</h2>
-                <p class="text-white" style="font-size: 1.2rem; margin-top: 10px;">Active Teachers</p>
+            <div class="stats-col" style="flex:1 1 0;min-width:0;text-align:center;">
+                <div class="stats-number">500+</div>
+                <p class="stats-label">Active Teachers</p>
             </div>
-            <div class="col-md-4 text-center mb-4 mb-md-0">
-                <h2 class="font-weight-bold text-warning" style="font-size: 3.5rem; color: white;">99.9%</h2>
-                <p class="text-white" style="font-size: 1.2rem; margin-top: 10px;">Uptime</p>
+            <div class="stats-col" style="flex:1 1 0;min-width:0;text-align:center;">
+                <div class="stats-number">99.9%</div>
+                <p class="stats-label">Uptime</p>
             </div>
         </div>
     </div>
 </section>
 
 <style>
-    /* Elegant Stepper Styles */
+    /* =============================================
+       DESKTOP BASE — rem / % / clamp throughout
+       ============================================= */
+
+    .about-hero-title {
+        font-size: 3.5rem;
+        line-height: 1.1;
+    }
+    .about-hero-sub {
+        font-size: 1.25rem;
+    }
+
+    .section-heading {
+        font-size: 3rem;
+        padding-top: 2.2rem;
+    }
+    .section-subheading {
+        font-size: 1.25rem;
+        max-width: 700px;
+        margin: 0 auto 3rem;
+        display: block;
+    }
+
+    /* Stats */
+    .stats-section {
+        background: linear-gradient(135deg, #2D1B69, #6f42c1);
+        color: white;
+        padding: 6rem 0;
+        margin-top: 5rem;
+    }
+    .stats-row {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    .stats-col {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        text-align: center !important;
+        padding: 0 1rem;
+    }
+    .stats-number {
+        font-size: 3.5rem;
+        font-weight: 700;
+        color: #FFD700 !important; /* override global h-tag color */
+        margin-bottom: 0;
+        line-height: 1;
+        display: block;
+    }
+    .stats-label {
+        font-size: 1.2rem;
+        margin-top: 0.6rem;
+        color: white !important;
+        margin-bottom: 0;
+    }
+
+    /* Stepper */
     .elegant-stepper-container {
         position: relative;
         max-width: 1000px;
         margin: 0 auto;
-        padding: 40px 20px;
+        padding: 2.5rem 1.25rem;
     }
-
-    /* Progress Bar */
     .stepper-progress-wrapper {
         position: absolute;
         top: 80px;
@@ -235,15 +228,12 @@
         height: 4px;
         z-index: 0;
     }
-
     .stepper-progress-line {
         position: absolute;
-        width: 100%;
-        height: 100%;
+        width: 100%; height: 100%;
         background: #e0e0e0;
         border-radius: 2px;
     }
-
     .stepper-progress-active {
         position: absolute;
         height: 100%;
@@ -252,16 +242,13 @@
         width: 0%;
         transition: width 0.5s ease;
     }
-
-    /* Navigation */
     .elegant-stepper-nav {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 60px;
+        margin-bottom: 3.75rem;
         position: relative;
         z-index: 1;
     }
-
     .elegant-step-item {
         display: flex;
         flex-direction: column;
@@ -270,290 +257,281 @@
         transition: all 0.3s ease;
         flex: 1;
     }
-
     .step-number {
         position: relative;
-        width: 60px;
-        height: 60px;
+        width: 3.75rem; height: 3.75rem;
         border-radius: 50%;
         background: white;
         border: 3px solid #e0e0e0;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 1.5rem;
         font-weight: bold;
         color: #999;
         transition: all 0.3s ease;
-        margin-bottom: 12px;
+        margin-bottom: 0.75rem;
         z-index: 2;
     }
-
     .step-pulse {
         position: absolute;
-        top: 50%;
-        left: 50%;
+        top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        width: 100%;
-        height: 100%;
+        width: 100%; height: 100%;
         border-radius: 50%;
         border: 3px solid #6f42c1;
         opacity: 0;
         animation: pulse 2s ease-out infinite;
     }
-
     .elegant-step-item.active .step-number {
         background: linear-gradient(135deg, #6f42c1, #d4af37);
         border-color: #6f42c1;
         color: white;
         box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
     }
+    .elegant-step-item.active .step-pulse { opacity: 1; }
+    .step-label { text-align: center; }
+    .step-title { font-size: 1rem; font-weight: 600; color: #333; margin-bottom: 4px; }
+    .step-desc  { font-size: 0.8125rem; color: #999; }
+    .elegant-step-item.active .step-title { color: #6f42c1; }
+    .elegant-step-item.active .step-desc  { color: #666; }
 
-    .elegant-step-item.active .step-pulse {
-        opacity: 1;
-    }
-
-    .step-label {
-        text-align: center;
-    }
-
-    .step-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 4px;
-    }
-
-    .step-desc {
-        font-size: 13px;
-        color: #999;
-    }
-
-    .elegant-step-item.active .step-title {
-        color: #6f42c1;
-    }
-
-    .elegant-step-item.active .step-desc {
-        color: #666;
-    }
-
-    /* Content */
     .elegant-stepper-content {
         background: white;
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-        padding: 50px;
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        padding: 3.125rem;
         min-height: 400px;
     }
-
-    .elegant-step-pane {
-        display: none;
-        animation: fadeInUp 0.5s ease;
-    }
-
-    .elegant-step-pane.active {
-        display: block;
-    }
-
-    .step-content-wrapper {
-        text-align: center;
-    }
-
+    .elegant-step-pane { display: none; animation: fadeInUp 0.5s ease; }
+    .elegant-step-pane.active { display: block; }
+    .step-content-wrapper { text-align: center; }
     .step-icon-wrapper {
-        width: 100px;
-        height: 100px;
-        margin: 0 auto 30px;
+        width: 6.25rem; height: 6.25rem;
+        margin: 0 auto 1.875rem;
         background: linear-gradient(135deg, #6f42c1, #d4af37);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 8px 25px rgba(111, 66, 193, 0.3);
+        box-shadow: 0 8px 25px rgba(111,66,193,0.3);
     }
-
-    .step-icon-wrapper i {
-        font-size: 48px;
-        color: white;
-    }
-
-    .step-content-title {
-        font-size: 32px;
-        font-weight: bold;
-        color: #1a1f3a;
-        margin-bottom: 20px;
-    }
-
+    .step-icon-wrapper i { font-size: 3rem; color: white; }
+    .step-content-title { font-size: 2rem; font-weight: bold; color: #1a1f3a; margin-bottom: 1.25rem; }
     .step-content-text {
-        font-size: 18px;
-        color: #666;
-        line-height: 1.6;
-        max-width: 700px;
-        margin: 0 auto 40px;
+        font-size: 1.125rem; color: #666; line-height: 1.6;
+        max-width: 700px; margin: 0 auto 2.5rem;
     }
-
     .step-feature-list {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        max-width: 500px;
-        margin: 0 auto;
-        text-align: left;
+        display: flex; flex-direction: column; gap: 1rem;
+        max-width: 500px; margin: 0 auto; text-align: left;
     }
-
     .feature-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.75rem 1.25rem;
+        background: #f8f9fa; border-radius: 8px;
         transition: all 0.3s ease;
     }
+    .feature-item:hover { background: #e9ecef; transform: translateX(5px); }
+    .feature-item i    { color: #6f42c1; font-size: 1.25rem; }
+    .feature-item span { font-size: 1rem; color: #333; }
 
-    .feature-item:hover {
-        background: #e9ecef;
-        transform: translateX(5px);
-    }
-
-    .feature-item i {
-        color: #6f42c1;
-        font-size: 20px;
-    }
-
-    .feature-item span {
-        font-size: 16px;
-        color: #333;
-    }
-
-    /* Animations */
     @keyframes pulse {
-        0% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0.8;
-        }
-
-        100% {
-            transform: translate(-50%, -50%) scale(1.5);
-            opacity: 0;
-        }
+        0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.8; }
+        100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
     }
-
     @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* Responsive */
+    /* =============================================
+       MOBILE  ≤ 768px
+       clamp(min, preferred-vw, max) keeps sizes
+       fluid across ALL phone widths automatically.
+       ============================================= */
     @media (max-width: 768px) {
+
+        /* Hero: stack and center */
+        .remove-hero-wrapper {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 1.25rem !important;
+            padding: 2rem 0 !important;
+        }
+
+        .about-hero-img-wrap {
+            width: 85% !important;
+            max-width: 290px !important;
+            margin: 0 auto !important;
+        }
+
+        .about-hero-text {
+            width: 100% !important;
+            text-align: center !important;
+            padding: 0 !important;
+            margin-top: 0 !important;
+        }
+
+        /*
+          clamp(floor, fluid, ceiling)
+          On 360px: 5.5vw ≈ 1.26rem  — comfortable
+          On 430px: 5.5vw ≈ 1.5rem   — still fits
+          On 768px: 5.5vw ≈ 2.7rem   — capped at 2.2rem
+        */
+        .about-hero-title {
+            font-size: clamp(1.2rem, 5.5vw, 2.2rem) !important;
+            line-height: 1.3 !important;
+        }
+
+        .about-hero-sub {
+            font-size: clamp(0.78rem, 3.2vw, 1rem) !important;
+            line-height: 1.5 !important;
+        }
+
+        /* How It Works */
+        .hiw-section { padding-top: 0.5rem !important; }
+
+        .section-heading {
+            font-size: clamp(1.3rem, 5.5vw, 1.8rem) !important;
+            padding-top: 0.75rem !important;
+        }
+
+        .section-subheading {
+            font-size: clamp(0.75rem, 3.2vw, 0.9rem) !important;
+            margin-bottom: 1.25rem !important;
+        }
+
+        /* Stats — locked to one row, fluid text */
+        .stats-section { padding: 2.5rem 0 !important; margin-top: 2rem !important; }
+
+        .stats-row {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        .stats-col {
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+            padding: 0 1.5% !important;
+        }
+
+        /*
+          On 360px: 4.8vw ≈ 1.1rem
+          On 430px: 4.8vw ≈ 1.3rem
+          ceiling 1.5rem keeps it from getting too big on wider phones
+        */
+        .stats-number {
+            font-size: clamp(1rem, 4.8vw, 1.5rem) !important;
+            line-height: 1.1 !important;
+            word-break: break-all;
+        }
+
+        .stats-label {
+            font-size: clamp(0.58rem, 2.6vw, 0.78rem) !important;
+            margin-top: 0.25rem !important;
+            line-height: 1.3 !important;
+        }
+
+        /* Stepper */
         .elegant-stepper-nav {
             display: grid !important;
             grid-template-columns: repeat(2, 1fr) !important;
-            gap: 15px !important;
+            gap: 0.75rem !important;
+            margin-bottom: 1.5rem !important;
         }
 
-        .stepper-progress-wrapper {
-            display: none;
-        }
-
-        .elegant-step-item {
-            flex-direction: column;
-            justify-content: center;
-            text-align: center;
-        }
+        .stepper-progress-wrapper { display: none !important; }
 
         .step-number {
-            width: 45px;
-            height: 45px;
-            font-size: 18px;
-            margin-right: 0;
-            margin-bottom: 8px;
+            width: clamp(2rem, 8vw, 2.8rem) !important;
+            height: clamp(2rem, 8vw, 2.8rem) !important;
+            font-size: clamp(0.85rem, 3.5vw, 1.1rem) !important;
+            margin-bottom: 0.4rem !important;
         }
 
-        .step-label {
-            text-align: center;
-        }
-
-        .step-title {
-            font-size: 14px;
-        }
-
-        .step-desc {
-            font-size: 11px;
-        }
+        .step-title { font-size: clamp(0.7rem, 2.8vw, 0.875rem) !important; }
+        .step-desc  { font-size: clamp(0.6rem, 2.4vw, 0.75rem) !important; }
 
         .elegant-stepper-content {
-            padding: 25px 15px;
-            min-height: 300px;
-        }
-
-        .step-content-title {
-            font-size: 20px;
-        }
-
-        .step-content-text {
-            font-size: 14px;
+            padding: 1.25rem 0.875rem !important;
+            min-height: auto !important;
         }
 
         .step-icon-wrapper {
-            width: 70px;
-            height: 70px;
-            margin-bottom: 20px;
+            width: clamp(3rem, 12vw, 4.5rem) !important;
+            height: clamp(3rem, 12vw, 4.5rem) !important;
+            margin-bottom: 0.875rem !important;
         }
 
         .step-icon-wrapper i {
-            font-size: 32px;
+            font-size: clamp(1.2rem, 5vw, 1.8rem) !important;
         }
+
+        .step-content-title {
+            font-size: clamp(1rem, 4.5vw, 1.3rem) !important;
+            margin-bottom: 0.6rem !important;
+        }
+
+        .step-content-text {
+            font-size: clamp(0.75rem, 3.2vw, 0.9rem) !important;
+            margin-bottom: 1rem !important;
+        }
+
+        .step-feature-list { gap: 0.5rem !important; }
 
         .feature-item {
-            padding: 10px 15px;
+            padding: 0.5rem 0.75rem !important;
+            gap: 0.4rem !important;
         }
 
-        .feature-item span {
-            font-size: 14px;
-        }
+        .feature-item span { font-size: clamp(0.7rem, 2.8vw, 0.85rem) !important; }
+        .feature-item i    { font-size: clamp(0.85rem, 3.2vw, 1rem) !important; }
     }
+    /* =============================================
+       ≤ 440px — extra squeeze for small phones
+       ============================================= */
+    @media (max-width: 440px) {
+        .about-hero-title  { font-size: clamp(1.05rem, 5vw, 1.4rem) !important; }
+        .about-hero-sub    { font-size: clamp(0.7rem, 3vw, 0.88rem) !important; }
+        .section-heading   { font-size: clamp(1.15rem, 5vw, 1.5rem) !important; }
+        .section-subheading { font-size: clamp(0.68rem, 3vw, 0.82rem) !important; }
 
-    /* Stats Section Mobile */
-    @media (max-width: 768px) {
-        .stats-section {
-            padding: 60px 0 !important;
-            height: auto !important;
+        /* Stats: even tighter on ≤440px */
+        .stats-row {
+            display: flex !important;
+            flex-wrap: nowrap !important;
         }
+        .stats-col { padding: 0 1% !important; }
+        .stats-number { font-size: clamp(0.9rem, 4.2vw, 1.2rem) !important; }
+        .stats-label  { font-size: clamp(0.52rem, 2.3vw, 0.7rem) !important; }
 
-        .stats-section .col-md-4 h2 {
-            font-size: 2.5rem !important;
+        .step-number {
+            width: clamp(1.7rem, 7vw, 2.2rem) !important;
+            height: clamp(1.7rem, 7vw, 2.2rem) !important;
         }
-
-        .stats-section .col-md-4 p {
-            font-size: 1rem !important;
-        }
+        .step-title { font-size: clamp(0.62rem, 2.5vw, 0.78rem) !important; }
+        .step-desc  { font-size: clamp(0.55rem, 2.2vw, 0.65rem) !important; }
+        .step-content-title { font-size: clamp(0.95rem, 4vw, 1.15rem) !important; }
+        .step-content-text  { font-size: clamp(0.7rem, 3vw, 0.82rem) !important; }
+        .feature-item span  { font-size: clamp(0.65rem, 2.5vw, 0.75rem) !important; }
     }
 </style>
 
 <script>
     function showElegantStep(index) {
-        // Remove active class from navs
         const navs = document.querySelectorAll('.elegant-step-item');
         navs.forEach(nav => nav.classList.remove('active'));
         navs[index].classList.add('active');
 
-        // Update progress bar
         const progressBar = document.getElementById('progressActive');
-        const progressWidth = (index / (navs.length - 1)) * 100;
-        progressBar.style.width = progressWidth + '%';
+        progressBar.style.width = (index / (navs.length - 1)) * 100 + '%';
 
-        // Hide all panes
-        const panes = document.querySelectorAll('.elegant-step-pane');
-        panes.forEach(pane => pane.classList.remove('active'));
-
-        // Show selected pane
+        document.querySelectorAll('.elegant-step-pane')
+            .forEach(p => p.classList.remove('active'));
         document.getElementById('elegant-step-' + index).classList.add('active');
     }
 </script>
