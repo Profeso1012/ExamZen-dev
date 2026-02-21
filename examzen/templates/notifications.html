@@ -3,30 +3,159 @@
 {% block header %}Notifications{% endblock %}
 
 {% block content %}
+<style>
+    .notification-item {
+        border-bottom: 1px solid #eee;
+        padding: 15px;
+        transition: background 0.2s;
+    }
+
+    .notification-item:hover {
+        background: #f8f9fa;
+    }
+
+    .notification-item.unread {
+        background: #f0f5ff;
+        border-left: 3px solid var(--primary-color);
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .notification-type {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .type-invitation {
+        background: #E8F5E9;
+        color: #2E7D32;
+    }
+
+    .type-complaint {
+        background: #FFF3E0;
+        color: #E65100;
+    }
+
+    .type-general {
+        background: #E3F2FD;
+        color: #1565C0;
+    }
+
+    .type-exam_assigned {
+        background: #F3E5F5;
+        color: #6A1B9A;
+    }
+
+    .notification-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .notification-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .notification-actions {
+            flex-direction: column;
+        }
+
+        .notification-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+
 <div class="metrics-grid"
     style="align-items: start; {% if current_user.status == 'Examiner' %}grid-template-columns: 2fr 1fr;{% else %}grid-template-columns: 1fr;{% endif %}">
 
     <!-- Notification List -->
     <div class="card">
-        <div class="card-header">Inbox</div>
+        <div class="card-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Inbox</span>
+                <span style="font-size: 0.85rem; color: #666;">{{ notifications|length }} notifications</span>
+            </div>
+        </div>
         {% if notifications %}
-        <div style="display: flex; flex-direction: column; gap: 15px;">
+        <div style="display: flex; flex-direction: column;">
             {% for notif in notifications %}
-            <div
-                style="border-bottom: 1px solid #eee; padding-bottom: 15px; {% if loop.last %}border-bottom: none; padding-bottom: 0;{% endif %}">
-                <div style="font-weight: 500; color: #1C2D38; display: flex; justify-content: space-between;">
-                    <span>{{ notif.title }}</span>
-                    <span style="font-size: 0.8rem; color: #999;">{{ notif.created_at.strftime('%Y-%m-%d %H:%M')
-                        }}</span>
+            <div class="notification-item {% if not notif.is_read %}unread{% endif %}">
+                <div class="notification-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="notification-type type-{{ notif.type }}">{{ notif.type }}</span>
+                        {% if notif.sender %}
+                        <span style="font-size: 0.85rem; color: #666;">from {{ notif.sender.username }}</span>
+                        {% endif %}
+                    </div>
+                    <span style="font-size: 0.8rem; color: #999;">{{ notif.created_at.strftime('%b %d, %I:%M %p') }}</span>
                 </div>
-                <div style="margin-top: 5px; color: #5C6C75; line-height: 1.4;">
+                <div style="margin-top: 5px; color: #333; line-height: 1.5;">
                     {{ notif.message }}
                 </div>
+
+                <!-- Invitation Actions -->
+                {% if notif.type == 'invitation' and not notif.action_taken %}
+                <div class="notification-actions">
+                    <a href="{{ url_for('respond_invitation', notification_id=notif.id, action='accept') }}" 
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-check"></i> Accept Invitation
+                    </a>
+                    <a href="{{ url_for('respond_invitation', notification_id=notif.id, action='reject') }}" 
+                       class="btn btn-outline btn-sm">
+                        <i class="fas fa-times"></i> Decline
+                    </a>
+                </div>
+                {% elif notif.type == 'invitation' and notif.action_taken %}
+                <div style="margin-top: 10px; color: #666; font-size: 0.85rem;">
+                    <i class="fas fa-check-circle"></i> You have responded to this invitation
+                </div>
+                {% endif %}
+
+                <!-- Complaint View (for teachers) -->
+                {% if notif.type == 'complaint' and current_user.status == 'Examiner' %}
+                <div class="notification-actions">
+                    <a href="{{ url_for('view_exam_results', exam_id=notif.related_id) }}" 
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-eye"></i> View Exam
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Mark as Read -->
+                {% if not notif.is_read %}
+                <button onclick="markAsRead({{ notif.id }})" 
+                        class="btn btn-outline btn-sm" 
+                        style="margin-top: 10px; font-size: 0.8rem;">
+                    <i class="fas fa-check"></i> Mark as Read
+                </button>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p style="color: #666; text-align: center; padding: 20px;">You have no notifications.</p>
+        <div style="text-align: center; padding: 40px 20px;">
+            <i class="fas fa-bell-slash" style="font-size: 3rem; color: #ddd; margin-bottom: 15px;"></i>
+            <p style="color: #666;">You have no notifications.</p>
+        </div>
         {% endif %}
     </div>
 
@@ -77,19 +206,34 @@
             </div>
         </form>
     </div>
-
-    <script>
-        function toggleRecipient(type) {
-            if (type === 'student') {
-                document.getElementById('studentInput').style.display = 'block';
-                document.getElementById('classInput').style.display = 'none';
-            } else {
-                document.getElementById('studentInput').style.display = 'none';
-                document.getElementById('classInput').style.display = 'block';
-            }
-        }
-    </script>
     {% endif %}
 
 </div>
+
+<script>
+    function toggleRecipient(type) {
+        if (type === 'student') {
+            document.getElementById('studentInput').style.display = 'block';
+            document.getElementById('classInput').style.display = 'none';
+        } else {
+            document.getElementById('studentInput').style.display = 'none';
+            document.getElementById('classInput').style.display = 'block';
+        }
+    }
+
+    function markAsRead(notifId) {
+        fetch(`/notification/${notifId}/mark_read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            }
+        });
+    }
+</script>
 {% endblock %}

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from flask import render_template, url_for, flash, redirect, request, jsonify, abort
 from examzen import app, db, bcrypt
 from examzen.forms import RegistrationForm, LoginForm, UpdateAccountForm, ExamForm, OrganizationRegistrationForm, ClassForm, ExcelUploadForm
-from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer, Class, Notification, Organization
+from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer, Class, Notification, Organization, OrganizationTeacher
 from examzen.utils import parse_questions_excel, parse_students_excel, send_notification
 from flask_login import login_user, current_user, logout_user, login_required
 
@@ -877,6 +877,131 @@ def notifications():
 def settings():
     return render_template('settings.html')
 
+# Organization-Teacher Invitation Routes
+@app.route('/org/invite_teacher', methods=['POST'])
+@login_required
+def org_invite_teacher():
+    """Organization invites a teacher"""
+    if current_user.status != 'Organization':
+        abort(403)
+    
+    from examzen.models import OrganizationTeacher
+    teacher_email = request.form.get('teacher_email')
+    teacher = User.query.filter_by(email=teacher_email, status='Examiner').first()
+    
+    if not teacher:
+        flash('Teacher not found. Please ensure they have an Examiner account.', 'danger')
+        return redirect(url_for('organization_dashboard'))
+    
+    # Check if already invited
+    existing = OrganizationTeacher.query.filter_by(
+        organization_id=current_user.organization_id,
+        teacher_id=teacher.id
+    ).first()
+    
+    if existing:
+        flash('This teacher has already been invited.', 'warning')
+        return redirect(url_for('organization_dashboard'))
+    
+    # Create invitation
+    invitation = OrganizationTeacher(
+        organization_id=current_user.organization_id,
+        teacher_id=teacher.id,
+        status='pending'
+    )
+    db.session.add(invitation)
+    
+    # Send notification
+    notif = Notification(
+        sender_id=current_user.id,
+        receiver_id=teacher.id,
+        message=f'{current_user.organization.name} has invited you to join their organization. Accept to share your classes with them.',
+        type='invitation',
+        related_id=current_user.organization_id
+    )
+    db.session.add(notif)
+    db.session.commit()
+    
+    flash(f'Invitation sent to {teacher.username}!', 'success')
+    return redirect(url_for('organization_dashboard'))
+
+@app.route('/teacher/respond_invitation/<int:notification_id>/<action>')
+@login_required
+def respond_invitation(notification_id, action):
+    """Teacher accepts or rejects organization invitation"""
+    if current_user.status != 'Examiner':
+        abort(403)
+    
+    from examzen.models import OrganizationTeacher
+    notif = Notification.query.get_or_404(notification_id)
+    
+    if notif.receiver_id != current_user.id or notif.type != 'invitation':
+        abort(403)
+    
+    invitation = OrganizationTeacher.query.filter_by(
+        organization_id=notif.related_id,
+        teacher_id=current_user.id
+    ).first()
+    
+    if not invitation:
+        flash('Invitation not found.', 'danger')
+        return redirect(url_for('notifications'))
+    
+    if action == 'accept':
+        invitation.status = 'accepted'
+        invitation.responded_at = datetime.utcnow()
+        notif.action_taken = True
+        flash('You have accepted the invitation!', 'success')
+    elif action == 'reject':
+        invitation.status = 'rejected'
+        invitation.responded_at = datetime.utcnow()
+        notif.action_taken = True
+        flash('You have rejected the invitation.', 'info')
+    
+    db.session.commit()
+    return redirect(url_for('notifications'))
+
+# Complaint System
+@app.route('/exam/<int:exam_id>/complaint', methods=['POST'])
+@login_required
+def submit_exam_complaint(exam_id):
+    """Student submits complaint about exam result"""
+    if current_user.status != 'Student':
+        abort(403)
+    
+    exam = Exam.query.get_or_404(exam_id)
+    complaint_message = request.form.get('complaint_message')
+    
+    if not complaint_message:
+        flash('Please provide a complaint message.', 'warning')
+        return redirect(url_for('view_exam_results', exam_id=exam_id))
+    
+    # Send notification to exam creator
+    notif = Notification(
+        sender_id=current_user.id,
+        receiver_id=exam.created_by_id,
+        message=f'Complaint from {current_user.username} about exam "{exam.name}": {complaint_message}',
+        type='complaint',
+        related_id=exam_id
+    )
+    db.session.add(notif)
+    db.session.commit()
+    
+    flash('Your complaint has been sent to the teacher.', 'success')
+    return redirect(url_for('view_exam_results', exam_id=exam_id))
+
+@app.route('/notification/<int:notif_id>/mark_read', methods=['POST'])
+@login_required
+def mark_notification_read(notif_id):
+    """Mark notification as read"""
+    notif = Notification.query.get_or_404(notif_id)
+    if notif.receiver_id != current_user.id:
+        abort(403)
+    notif.is_read = True
+    db.session.commit()
+    return jsonify({'status': 'success'})
+
+
 
 @app.route('/available_exams')
 @login_required
@@ -886,7 +1011,35 @@ def available_exams():
 @app.route('/my_results')
 @login_required
 def my_results():
-    return render_template('my_results.html')
+    """Student views all their exam results"""
+    if current_user.status != 'Student':
+        abort(403)
+    
+    # Get all exams the student has taken
+    taken_exams = TakenExam.query.filter_by(user_id=current_user.id).order_by(TakenExam.taken_at.desc()).all()
+    
+    results = []
+    for taken in taken_exams:
+        exam = taken.exam
+        # Calculate score
+        total_questions = len(exam.questions)
+        correct_answers = Answer.query.filter_by(
+            exam_id=exam.id,
+            user_id=current_user.id,
+            is_correct=True
+        ).count()
+        
+        score = (correct_answers / total_questions * 100) if total_questions > 0 else 0
+        
+        results.append({
+            'exam': exam,
+            'taken_at': taken.taken_at,
+            'score': round(score, 2),
+            'correct': correct_answers,
+            'total': total_questions
+        })
+    
+    return render_template('my_results.html', results=results)
 
 
 @app.route('/exam/<int:exam_id>/manage')

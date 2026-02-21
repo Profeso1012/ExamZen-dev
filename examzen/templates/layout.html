@@ -10,6 +10,92 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles1.css') }}">
+
+    <style>
+    /* ================================================================
+       FOOTER — targeted overrides
+       ================================================================ */
+
+    /* ── PC (≥ 768px): social icons + legal links on one line ──────── */
+    @media (min-width: 768px) {
+        /* Put the right column's children in a single flex row,
+           left-aligned so social icons sit beside Terms/Privacy */
+        .footer-bottom .col-md-6:last-child {
+            display: flex !important;
+            align-items: center;
+            gap: 1.25rem;
+            justify-content: flex-start; /* not right-aligned */
+            text-align: left !important;
+        }
+
+        /* Remove the right-justify that Bootstrap was applying */
+        .footer-bottom .col-md-6.text-md-right {
+            text-align: left !important;
+        }
+
+        /* Inline the legal links without extra left margin */
+        .footer-bottom .legal-links {
+            margin-left: 0 !important;
+        }
+
+        /* Keep social icons in a tight row */
+        .footer-bottom .social-links-simple {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+    }
+
+    /* ── MOBILE (< 768px): footer-grid equal outer padding, more gap ── */
+    @media (max-width: 767.98px) {
+
+        /* Assumes footer-grid-remove becomes a 2-column grid/flex on mobile.
+           Use space-between so left edge of col1 = right edge of col2
+           relative to the container, and gap between columns is generous. */
+        .footer-grid-remove {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            column-gap: 2rem !important;  /* wider space between the two columns */
+            row-gap: 2rem !important;
+            padding-left: 1.25rem !important;
+            padding-right: 1.25rem !important;
+            box-sizing: border-box;
+        }
+
+        /* ── footer-bottom mobile layout ─────────────────────────────── */
+
+        /* Stack the two col-md-6 blocks and add breathing room */
+        .footer-bottom .row {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important;
+        }
+
+        /* Copyright line */
+        .footer-bottom .col-md-6:first-child {
+            margin-bottom: 1.25rem !important; /* gap between copyright and social row */
+        }
+
+        /* Social + legal row: flex row, space-around so spacing is balanced */
+        .footer-bottom .col-md-6:last-child {
+            display: flex !important;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-around;
+            gap: 0.75rem;
+            text-align: center !important;
+        }
+
+        .footer-bottom .social-links-simple {
+            display: inline-flex;
+            gap: 0.75rem;
+        }
+
+        .footer-bottom .legal-links {
+            margin-left: 0 !important;
+        }
+    }
+    </style>
 </head>
 
 <body>

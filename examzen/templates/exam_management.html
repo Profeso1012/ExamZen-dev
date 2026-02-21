@@ -3,87 +3,190 @@
 {% block header %}Manage Exam{% endblock %}
 
 <style>
-    .question-row-link {
-        text-decoration: none;
-        color: inherit;
-        display: block;
-        border-bottom: 1px solid #eee;
-    }
+/* ── Existing non-preview styles kept intact ── */
+.question-row-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    border-bottom: 1px solid #eee;
+}
+.question-row-link:last-of-type { border-bottom: none; }
+.question-row-hover {
+    padding: 15px;
+    transition: background 0.2s;
+}
+.question-row-hover:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+.correct-opt {
+    color: var(--secondary-color);
+    font-weight: bold;
+}
 
-    .question-row-link:last-of-type {
-        border-bottom: none;
-    }
+/* ================================================================
+   QUESTIONS PREVIEW — redesigned with dividers between cards
+   ================================================================ */
 
-    .question-row-hover {
-        padding: 15px;
-        transition: background 0.2s;
-    }
+/* Outer scroll container */
+.questions-list {
+    max-height: 540px;
+    overflow-y: auto;
+    padding: 8px 4px;
+}
 
-    .question-row-hover:hover {
-        background-color: #f8f9fa;
-        cursor: pointer;
-    }
+/* Individual question card — the whole thing is the click target */
+.q-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px 24px 20px;
+    margin-bottom: 0;  /* Remove margin, use divider instead */
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.12s ease;
+    position: relative;
+}
 
-    .correct-opt {
-        color: var(--secondary-color);
-        font-weight: bold;
-    }
+/* Divider between cards (except last) */
+.q-card:not(:last-child) {
+    border-bottom: 1px solid #e8e8ec;
+    padding-bottom: 24px;
+    margin-bottom: 20px;
+}
 
-    /* Container for each question card */
-    .question-card {
-        display: block;
-        text-decoration: none !important;
-        /* Force remove underline */
-        color: #333 !important;
-        /* Force standard text color */
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        padding: 16px;
-        transition: all 0.2s ease-in-out;
-        background-color: #fff;
-    }
+.q-card:hover {
+    background-color: #faf9ff;
+    transform: translateX(4px);
+}
+.q-card:active {
+    transform: translateX(2px);
+    background-color: #f5f3ff;
+}
 
-    /* Hover effect: Subtle lift and shadow */
-    .question-card:hover {
-        background-color: #fcfcfc;
-        border-color: #ccc;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        cursor: pointer;
-    }
+/* Top bar: question number badge + text */
+.q-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.q-num {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #6f42c1, #4e2d9a);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+    box-shadow: 0 2px 8px rgba(111, 66, 193, 0.25);
+}
+.q-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    line-height: 1.55;
+    flex: 1;
+}
 
-    /* Active/Click feedback */
-    .question-card:active {
-        transform: translateY(0);
-        background-color: #f0f0f0;
-    }
+/* Options layout — integrated with question */
+.q-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding-left: 46px;  /* Align with question text (badge width + gap) */
+}
 
-    .question-text {
-        font-weight: 600;
-        font-size: 1rem;
-        margin-bottom: 10px;
-        display: block;
-    }
+.q-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: #555570;
+    background: #f8f8fb;
+    border: 1px solid #e8e8f0;
+    border-radius: 8px;
+    padding: 6px 14px;
+    line-height: 1.4;
+    transition: all 0.15s ease;
+}
 
-    .options-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        font-size: 0.9rem;
-        color: #555;
-    }
+/* Correct option — stands out in green */
+.q-option.correct {
+    color: #15803d;
+    background: #dcfce7;
+    border-color: #86efac;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(34, 197, 94, 0.15);
+}
+.q-option.correct .opt-tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: #22c55e;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 2px;
+}
+.q-option.correct .opt-tick::after {
+    content: '✓';
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
 
-    /* Highlight the correct option */
-    .option-item.is-correct {
-        color: #28a745;
-        /* Success Green */
-        font-weight: 700;
-        background-color: #e8f5e9;
-        padding: 2px 8px;
-        border-radius: 4px;
+/* Edit hint that appears on hover */
+.q-card::after {
+    content: 'Click to edit →';
+    position: absolute;
+    top: 22px;
+    right: 24px;
+    font-size: 0.75rem;
+    color: #8b5cf6;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.q-card:hover::after { 
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+/* Empty state */
+.q-empty {
+    padding: 48px 24px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.95rem;
+}
+.q-empty p {
+    margin: 0;
+}
+
+/* ── Mobile tweaks ── */
+@media (max-width: 600px) {
+    .questions-list { max-height: 420px; padding: 6px 2px; }
+    .q-card { padding: 18px 16px 16px; }
+    .q-card:not(:last-child) {
+        padding-bottom: 20px;
+        margin-bottom: 16px;
     }
+    .q-text { font-size: 0.95rem; }
+    .q-options { 
+        padding-left: 0; 
+        margin-top: 12px;
+        gap: 8px 10px;
+    }
+    .q-option { font-size: 0.85rem; padding: 5px 10px; }
+    .q-card::after { display: none; }
+    .q-header { margin-bottom: 12px; }
+}
+
 </style>
+
 {% block content %}
 <div style="margin-bottom: 20px;">
     <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="font-size: 0.85rem;">← Back to Dashboard</a>
@@ -102,8 +205,7 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.95rem;">
             <div>
                 <p><strong>Date:</strong> {{ exam.exam_date }}</p>
-                <p><strong>Time:</strong> {{ exam.start_time.strftime('%H:%M') }} - {{ exam.end_time.strftime('%H:%M')
-                    }}</p>
+                <p><strong>Time:</strong> {{ exam.start_time.strftime('%H:%M') }} - {{ exam.end_time.strftime('%H:%M') }}</p>
                 <p><strong>Duration:</strong> {{ exam.duration }} mins</p>
             </div>
             <div>
@@ -112,10 +214,11 @@
                 <p><strong>Status:</strong>
                     {% if exam.start_time > now %}
                     <span style="color: #F29D00;">Upcoming</span>
-                    {% elif exam.end_time < now %} <span style="color: #666;">Closed</span>
-                        {% else %}
-                        <span style="color: #00ED64;">Active</span>
-                        {% endif %}
+                    {% elif exam.end_time < now %}
+                    <span style="color: #666;">Closed</span>
+                    {% else %}
+                    <span style="color: #00ED64;">Active</span>
+                    {% endif %}
                 </p>
             </div>
         </div>
@@ -125,39 +228,48 @@
         <div class="card-header">Quick Actions</div>
         <div style="display: flex; flex-direction: column; gap: 10px;">
             <a href="{{ url_for('add_questions', exam_id=exam.id) }}" class="btn btn-primary">Add Questions Manually</a>
-            <a href="{{ url_for('import_questions', exam_id=exam.id) }}" class="btn btn-outline">Import via
-                CSV/Excel</a>
-            <a href="{{ url_for('exam_analytics', exam_id=exam.id) }}" class="btn btn-outline">View Results &
-                Analytics</a>
+            <a href="{{ url_for('import_questions', exam_id=exam.id) }}" class="btn btn-outline">Import via CSV/Excel</a>
+            <a href="{{ url_for('exam_analytics', exam_id=exam.id) }}" class="btn btn-outline">View Results & Analytics</a>
         </div>
     </div>
 </div>
 
+<!-- ════════════════════════════════════════════
+     QUESTIONS PREVIEW — redesigned with dividers between cards
+════════════════════════════════════════════ -->
 <div class="card">
     <div class="card-header">Questions Preview</div>
 
     {% if exam.questions %}
-    <div style="max-height: 500px; overflow-y: auto; padding: 10px;">
+    <div class="questions-list">
         {% for q in exam.questions %}
-        <a href="{{ url_for('edit_single_question', question_id=q.id) }}" class="question-card">
+        <div class="q-card"
+             onclick="window.location.href='{{ url_for('edit_single_question', question_id=q.id) }}'">
 
-            <span class="question-text">
-                Q{{ q.question_number }}. {{ q.question_text }}
-            </span>
+            <!-- Question number badge + text -->
+            <div class="q-header">
+                <span class="q-num">Q{{ q.question_number }}</span>
+                <span class="q-text">{{ q.question_text }}</span>
+            </div>
 
-            <div class="options-grid">
+            <!-- Options (no divider, directly under question) -->
+            <div class="q-options">
                 {% for opt in q.options %}
-                <span class="option-item {% if opt.is_correct %}is-correct{% endif %}">
-                    {{ opt.option_letter }}) {{ opt.option_text }}
+                <span class="q-option {% if opt.is_correct %}correct{% endif %}">
+                    {% if opt.is_correct %}<span class="opt-tick"></span>{% endif %}
+                    <strong>{{ opt.option_letter }})</strong>&nbsp;{{ opt.option_text }}
                 </span>
                 {% endfor %}
             </div>
 
-        </a>
+        </div>
         {% endfor %}
     </div>
+
     {% else %}
-    <p style="padding: 20px; color: #666; text-align: center;">No questions added yet.</p>
+    <div class="q-empty">
+        <p>No questions added yet.</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

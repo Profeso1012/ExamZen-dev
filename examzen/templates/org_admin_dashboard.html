@@ -4,25 +4,125 @@
 {% block title %}Organization Dashboard - ExamZen{% endblock %}
 
 {% block content %}
+<style>
+    .teacher-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 10px;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-pending {
+        background: #FFF3E0;
+        color: #E65100;
+    }
+
+    .status-accepted {
+        background: #E8F5E9;
+        color: #2E7D32;
+    }
+
+    .status-rejected {
+        background: #FFEBEE;
+        color: #C62828;
+    }
+
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+
+        .teacher-card {
+            padding: 12px;
+        }
+    }
+</style>
+
 <div class="container-fluid animate__animated animate__fadeIn">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4" style="flex-wrap: wrap; gap: 15px;">
         <div>
-            <h2 class="mb-1 text-dark font-weight-bold">{{ current_user.username }} Dashboard</h2>
+            <h2 class="mb-1 text-dark font-weight-bold">{{ organization.name }} Dashboard</h2>
             <p class="text-muted">Organization Administration</p>
         </div>
-        <div>
-            <a href="{{ url_for('org_create_class') }}" class="btn btn-primary shadow-sm">
-                <i class="fas fa-plus" style="margin-right: 8px;"></i> Create Class
-            </a>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid" style="margin-bottom: 30px;">
+        <div class="metric-card">
+            <div class="metric-value">{{ organization.teacher_associations|selectattr('status', 'equalto', 'accepted')|list|length }}</div>
+            <div class="metric-label">Active Teachers</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ organization.classes|length }}</div>
+            <div class="metric-label">Total Classes</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ organization.users|length }}</div>
+            <div class="metric-label">Total Users</div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-lg-12">
+        <!-- Invite Teacher Section -->
+        <div class="col-lg-4 mb-4">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white font-weight-bold">
-                    <i class="fas fa-chalkboard mr-2"></i> Created Classes
+                    <i class="fas fa-user-plus mr-2"></i> Invite Teacher
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('org_invite_teacher') }}">
+                        <div class="form-group">
+                            <label class="form-label">Teacher Email</label>
+                            <input type="email" name="teacher_email" class="form-control" 
+                                   placeholder="teacher@example.com" required>
+                            <small class="text-muted">Teacher must have an Examiner account</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-paper-plane"></i> Send Invitation
+                        </button>
+                    </form>
+
+                    <!-- Invited Teachers List -->
+                    <div style="margin-top: 20px;">
+                        <h6 class="font-weight-bold mb-3">Invited Teachers</h6>
+                        {% for assoc in organization.teacher_associations %}
+                        <div class="teacher-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600;">{{ assoc.teacher.username }}</div>
+                                    <div style="font-size: 0.85rem; color: #666;">{{ assoc.teacher.email }}</div>
+                                </div>
+                                <span class="status-badge status-{{ assoc.status }}">{{ assoc.status }}</span>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-muted" style="font-size: 0.9rem;">No teachers invited yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classes Section -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white font-weight-bold">
+                    <i class="fas fa-chalkboard mr-2"></i> Teacher Classes
+                    <small class="text-muted">(from accepted teachers)</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -31,25 +131,23 @@
                                 <tr>
                                     <th>Class Name</th>
                                     <th>Code</th>
+                                    <th>Teacher</th>
                                     <th>Students</th>
-                                    <th>Teachers</th>
-                                    <th>Created At</th>
+                                    <th>Exams</th>
                                     <th class="text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for class in organization.classes %}
+                                {% set all_classes = organization.get_all_classes() %}
+                                {% for class in all_classes %}
                                 <tr>
                                     <td>
                                         <div class="font-weight-bold">{{ class.name }}</div>
                                     </td>
                                     <td><code class="text-primary">{{ class.code }}</code></td>
-                                    <td><span class="badge badge-pill badge-light border">{{ class.students.count()
-                                            }}</span></td>
-                                    <td><span class="badge badge-pill badge-light border">{{ class.teachers.count()
-                                            }}</span></td>
-                                    <td class="text-muted" style="font-size: 0.85rem;">{{ class.created_at.strftime('%d
-                                        %b %Y') }}</td>
+                                    <td>{{ class.teachers.first().username if class.teachers.first() else 'N/A' }}</td>
+                                    <td><span class="badge badge-pill badge-light border">{{ class.students.count() }}</span></td>
+                                    <td><span class="badge badge-pill badge-light border">{{ class.exams|length }}</span></td>
                                     <td class="text-right">
                                         <a href="{{ url_for('view_class', class_id=class.id) }}"
                                             class="btn btn-sm btn-outline-primary">View</a>
@@ -58,8 +156,7 @@
                                 {% else %}
                                 <tr>
                                     <td colspan="6" class="text-center py-4 text-muted">
-                                        No classes created yet.
-                                        <a href="{{ url_for('org_create_class') }}">Create your first class</a>.
+                                        No classes available yet. Invite teachers to see their classes here.
                                     </td>
                                 </tr>
                                 {% endfor %}

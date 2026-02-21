@@ -59,7 +59,7 @@
         <select name="class_id" class="form-control">
           <option value="">-- No Class --</option>
           {% for cls in current_user.teaching_classes %}
-          <option value="{{ cls.id }}">{{ cls.name }} ({{ cls.students|length }} students)</option>
+          <option value="{{ cls.id }}">{{ cls.name }} ({{ cls.students.count() }} students)</option>
           {% endfor %}
         </select>
         <small style="color: #888;">Selecting a class will grant access to all students in that class.</small>

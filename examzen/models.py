@@ -26,6 +26,14 @@ class User(db.Model, UserMixin):
     answers = db.relationship('Answer', backref='user', lazy=True)
     exams_created = db.relationship('Exam', backref='creator', lazy=True)
 
+    @property
+    def profile_pic_base64(self):
+        """Convert profile pic to base64 for display"""
+        if self.profile_pic:
+            import base64
+            return base64.b64encode(self.profile_pic).decode('utf-8')
+        return None
+
     def __repr__(self):
         return f"User('{self.username}', '{self.status}')"
 
@@ -38,6 +46,23 @@ class Organization(db.Model):
     users = db.relationship('User', backref='organization', lazy=True)
     categories = db.relationship('Category', backref='organization', lazy=True)
     classes = db.relationship('Class', backref='org', lazy=True)
+
+    def get_accepted_teachers(self):
+        """Get all teachers who have accepted invitation to this organization"""
+        from examzen.models import OrganizationTeacher, User
+        accepted = OrganizationTeacher.query.filter_by(
+            organization_id=self.id, 
+            status='accepted'
+        ).all()
+        return [User.query.get(assoc.teacher_id) for assoc in accepted]
+    
+    def get_all_classes(self):
+        """Get all classes from accepted teachers"""
+        teachers = self.get_accepted_teachers()
+        all_classes = []
+        for teacher in teachers:
+            all_classes.extend(teacher.teaching_classes.all())
+        return all_classes
 
     def __repr__(self):
         return f"Organization('{self.name}')"
@@ -94,12 +119,34 @@ class Notification(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     message = db.Column(db.String(500), nullable=False)
-    type = db.Column(db.String(50), default='general')
+    type = db.Column(db.String(50), default='general')  # general, invitation, complaint, exam_assigned
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Additional fields for invitations and complaints
+    related_id = db.Column(db.Integer, nullable=True)  # Can be organization_id, exam_id, etc.
+    action_taken = db.Column(db.Boolean, default=False)  # For tracking if invitation accepted/rejected
+    
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_notifications')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='notifications')
+
+    def __repr__(self):
+        return f"Notification('{self.type}', '{self.message[:30]}...')"
+
+# OrganizationTeacher Association Model (for tracking invitations)
+class OrganizationTeacher(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    invited_at = db.Column(db.DateTime, default=datetime.utcnow)
+    responded_at = db.Column(db.DateTime, nullable=True)
+    
+    organization = db.relationship('Organization', backref='teacher_associations')
+    teacher = db.relationship('User', backref='organization_associations')
+    
+    def __repr__(self):
+        return f"OrgTeacher(Org:{self.organization_id}, Teacher:{self.teacher_id}, Status:{self.status})"
 
 # ProctorSession Model
 class ProctorSession(db.Model):

@@ -1,14 +1,215 @@
 {% extends "dashboard_layout.html" %}
-
-{% block title %}Page Under Construction{% endblock %}
+{% block title %}My Results{% endblock %}
+{% block header %}My Exam Results{% endblock %}
 
 {% block content %}
-<div class="container-fluid animate__animated animate__fadeIn text-center py-5">
-    <div class="mb-4">
-        <i class="fas fa-tools fa-4x text-muted mb-3 opacity-50"></i>
-        <h2 class="font-weight-bold text-dark">Under Construction</h2>
-        <p class="text-muted">This feature is coming soon.</p>
+<style>
+    .result-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .exam-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .score-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .score-excellent {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        color: white;
+    }
+
+    .score-good {
+        background: var(--secondary-color);
+        color: var(--primary-color);
+    }
+
+    .score-fair {
+        background: #FFA500;
+        color: white;
+    }
+
+    .score-poor {
+        background: #DC3545;
+        color: white;
+    }
+
+    .result-details {
+        display: flex;
+        gap: 20px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .detail-item i {
+        color: var(--primary-color);
+    }
+
+    .action-buttons {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #ddd;
+        margin-bottom: 20px;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .result-card {
+            padding: 15px;
+        }
+
+        .result-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .exam-title {
+            font-size: 1rem;
+        }
+
+        .score-badge {
+            padding: 6px 12px;
+            font-size: 0.95rem;
+        }
+
+        .result-details {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="margin: 0;">All Exam Results</h3>
     </div>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-primary shadow-sm">Back to Dashboard</a>
+
+    {% if results %}
+        {% for result in results %}
+        <div class="result-card">
+            <div class="result-header">
+                <div class="exam-title">{{ result.exam.name }}</div>
+                <div class="score-badge 
+                    {% if result.score >= 80 %}score-excellent
+                    {% elif result.score >= 60 %}score-good
+                    {% elif result.score >= 40 %}score-fair
+                    {% else %}score-poor{% endif %}">
+                    {{ result.score }}%
+                </div>
+            </div>
+
+            <div class="result-details">
+                <div class="detail-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>{{ result.correct }} / {{ result.total }} Correct</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>Taken: {{ result.taken_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fas fa-user"></i>
+                    <span>Teacher: {{ result.exam.creator.username }}</span>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <a href="{{ url_for('view_exam_results', exam_id=result.exam.id) }}" class="btn btn-primary">
+                    <i class="fas fa-eye"></i> View Detailed Results
+                </a>
+                <button class="btn btn-outline" onclick="toggleComplaintForm({{ result.exam.id }})">
+                    <i class="fas fa-exclamation-circle"></i> Report Issue
+                </button>
+            </div>
+
+            <!-- Complaint Form (Hidden by default) -->
+            <div id="complaint-form-{{ result.exam.id }}" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                <form method="POST" action="{{ url_for('submit_exam_complaint', exam_id=result.exam.id) }}">
+                    <div class="form-group">
+                        <label class="form-label">Describe your concern:</label>
+                        <textarea name="complaint_message" class="form-control" rows="3" required placeholder="Please explain the issue with this exam..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button type="submit" class="btn btn-primary">Send Complaint</button>
+                        <button type="button" class="btn btn-outline" onclick="toggleComplaintForm({{ result.exam.id }})">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-clipboard-list"></i>
+            <h3>No Results Yet</h3>
+            <p>You haven't taken any exams yet. Check your dashboard for available exams.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="margin-top: 20px;">
+                Go to Dashboard
+            </a>
+        </div>
+    {% endif %}
 </div>
+
+<script>
+    function toggleComplaintForm(examId) {
+        const form = document.getElementById('complaint-form-' + examId);
+        if (form.style.display === 'none') {
+            form.style.display = 'block';
+        } else {
+            form.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}

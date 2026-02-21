@@ -1,0 +1,50 @@
+╔══════════════════════════════════════════════════════════════╗
+║                    EXAMZEN QUICK FIX                         ║
+║                  Fix 500 Errors in 3 Steps                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+STEP 1: Run Migration
+━━━━━━━━━━━━━━━━━━━━━━
+$ python migrate_db.py
+
+Wait for: ✅ DATABASE MIGRATION COMPLETED SUCCESSFULLY!
+
+
+STEP 2: Restart Server
+━━━━━━━━━━━━━━━━━━━━━━
+Press Ctrl+C to stop current server
+$ flask run
+
+
+STEP 3: Test
+━━━━━━━━━━━━━━━━━━━━━━
+✓ Login as teacher
+✓ Go to /dashboard (should work)
+✓ Go to /create_exam (should work)
+✓ Go to /notifications (should work)
+
+
+THAT'S IT! 🎉
+━━━━━━━━━━━━━━━━━━━━━━
+
+If still broken, check STEP_BY_STEP_FIX.md for detailed help.
+
+
+Common Issues:
+━━━━━━━━━━━━━━━━━━━━━━
+❌ "column notification.related_id does not exist"
+   → Migration didn't run. Run: python migrate_db.py
+
+❌ "TypeError: object of type 'AppenderBaseQuery' has no len()"
+   → Template not updated. Check create_exam.html line 62
+
+❌ Database connection error
+   → Check SQLALCHEMY_DATABASE_URI in app.py
+
+
+Quick Test Commands:
+━━━━━━━━━━━━━━━━━━━━━━
+# Check if migration worked
+$ python -c "from examzen import app, db; from sqlalchemy import inspect; app.app_context().push(); print([c['name'] for c in inspect(db.engine).get_columns('notification')])"
+
+# Should show: [..., 'related_id', 'action_taken']

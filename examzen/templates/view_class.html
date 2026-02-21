@@ -14,7 +14,9 @@
             <p><strong>Class Name:</strong> {{ classroom.name }}</p>
             <p><strong>Class Code:</strong> <span style="font-family: monospace; background: #eee; padding: 2px 5px;">{{
                     classroom.code }}</span></p>
-            <p><strong>Created By:</strong> {{ classroom.creator.username }}</p>
+            {% if classroom.teachers.first() %}
+            <p><strong>Teacher:</strong> {{ classroom.teachers.first().username }}</p>
+            {% endif %}
         </div>
     </div>
 
@@ -23,6 +25,8 @@
         <ul style="padding-left: 20px;">
             {% for teacher in classroom.teachers %}
             <li>{{ teacher.username }}</li>
+            {% else %}
+            <li style="color: #999;">No teachers assigned</li>
             {% endfor %}
         </ul>
     </div>
