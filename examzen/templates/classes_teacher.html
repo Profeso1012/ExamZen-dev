@@ -1,44 +1,72 @@
 {% extends "dashboard_layout.html" %}
-{% block title %}My Classes - ExamZen{% endblock %}
-{% block header %}Class Management{% endblock %}
+{% block title %}My Classes{% endblock %}
+{% block header %}My Classes{% endblock %}
 
 {% block content %}
-<div class="metrics-grid" style="grid-template-columns: 2fr 1fr; align-items: start;">
+<style>
+    .class-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 16px;
+        border-left: 4px solid var(--primary-color);
+        transition: box-shadow 0.2s;
+    }
+    .class-card:hover { box-shadow: 0 4px 16px rgba(45,27,105,0.1); }
+    .class-meta { display: flex; gap: 20px; flex-wrap: wrap; margin: 10px 0; font-size: 0.9rem; color: #666; }
+    .class-meta span { display: flex; align-items: center; gap: 6px; }
+    .class-meta i { color: var(--primary-color); }
+    .code-badge {
+        display: inline-block; background: var(--secondary-color); color: var(--primary-color);
+        padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;
+    }
+    @media (max-width: 768px) {
+        .layout-grid { grid-template-columns: 1fr !important; }
+        .class-meta { flex-direction: column; gap: 8px; }
+    }
+</style>
 
-    <!-- Class List -->
-    <div class="card">
-        <div class="card-header">Your Classes</div>
+<div class="layout-grid grid-2col" style="gap: 24px; align-items: start;">
+
+    <!-- Left: Class List -->
+    <div>
         {% if classes %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Class Name</th>
-                    <th>Code</th>
-                    <th>Students</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for cls in classes %}
-                <tr>
-                    <td>{{ cls.name }}</td>
-                    <td><span style="background: #eee; padding: 2px 6px; border-radius: 4px; font-family: monospace;">{{
-                            cls.code }}</span></td>
-                    <td>{{ cls.students|length }}</td>
-                    <td>
-                        <a href="{{ url_for('view_class', class_id=cls.id) }}"
-                            style="color: var(--primary-color);">View</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            {% for cls in classes %}
+            <div class="class-card">
+                <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">{{ cls.name }}</div>
+                        <span class="code-badge">{{ cls.code }}</span>
+                    </div>
+                    <a href="{{ url_for('view_class', class_id=cls.id) }}" class="btn btn-primary" style="padding: 6px 16px; font-size: 0.85rem;">
+                        Manage →
+                    </a>
+                </div>
+                <div class="class-meta">
+                    <span><i class="fas fa-users"></i> {{ cls.students.count() }} students</span>
+                    <span><i class="fas fa-chalkboard-teacher"></i> {{ cls.teachers.count() }} teacher(s)</span>
+                    <span><i class="fas fa-file-alt"></i> {{ cls.exams|length }} exams</span>
+                    <span><i class="fas fa-clock"></i> Created {{ cls.created_at.strftime('%b %d, %Y') }}</span>
+                </div>
+                {% set pending_invites = cls.invitations.filter_by(status='pending').count() %}
+                {% if pending_invites > 0 %}
+                <div style="margin-top: 8px; font-size: 0.85rem; color: #E65100;">
+                    <i class="fas fa-hourglass-half"></i> {{ pending_invites }} pending student invitation(s)
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
         {% else %}
-        <p style="color: #666;">No classes created yet.</p>
+            <div class="card" style="text-align: center; padding: 50px 20px;">
+                <i class="fas fa-chalkboard" style="font-size: 3rem; color: #ddd; margin-bottom: 15px;"></i>
+                <h3 style="color: #999;">No classes yet</h3>
+                <p style="color: #aaa;">Create your first class using the form →</p>
+            </div>
         {% endif %}
     </div>
 
-    <!-- Create Class -->
+    <!-- Right: Create Class Form -->
     <div class="card">
         <div class="card-header">Create New Class</div>
         <form method="POST" enctype="multipart/form-data">
@@ -48,26 +76,33 @@
                 {{ form.name(class="form-control", placeholder="e.g. History 101") }}
             </div>
             <div class="form-group">
-                <label class="form-label">Class Code (Unique)</label>
+                <label class="form-label">Class Code <small style="color:#999;">(unique)</small></label>
                 {{ form.code(class="form-control", placeholder="e.g. HIS101") }}
             </div>
 
-            <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
-            <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;"><strong>Add Students (Optional)</strong></p>
+            <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+            <p style="font-size:0.9rem; font-weight:600; color:#444; margin-bottom:10px;">
+                <i class="fas fa-envelope" style="color:var(--primary-color);"></i>
+                Invite Students (Optional)
+            </p>
+            <p style="font-size:0.8rem; color:#888; margin-bottom:12px;">
+                Students will receive an invitation and must accept to join.
+            </p>
 
             <div class="form-group">
                 <label class="form-label">Upload Excel/CSV</label>
                 {{ form.students_file(class="form-control") }}
-                <small style="color: #888;">Column "Email" required.</small>
+                <small style="color:#888;">Needs an "Email" column.</small>
             </div>
-
             <div class="form-group">
-                <label class="form-label">Manual Emails</label>
-                {{ form.manual_emails(class="form-control", rows=3, placeholder="student1@example.com,
-                student2@example.com") }}
+                <label class="form-label">Or Enter Emails Manually</label>
+                {{ form.manual_emails(class="form-control", rows=4, placeholder="student1@example.com\nstudent2@example.com") }}
+                <small style="color:#888;">One per line or comma-separated.</small>
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Create Class</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">
+                <i class="fas fa-plus"></i> Create Class & Send Invitations
+            </button>
         </form>
     </div>
 </div>

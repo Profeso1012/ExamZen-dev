@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from flask import render_template, url_for, flash, redirect, request, jsonify, abort
 from examzen import app, db, bcrypt
 from examzen.forms import RegistrationForm, LoginForm, UpdateAccountForm, ExamForm, OrganizationRegistrationForm, ClassForm, ExcelUploadForm
-from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer, Class, Notification, Organization, OrganizationTeacher
+from examzen.models import User, Exam, TakenExam, Question, Examoption, ExamCode, Answer, Class, Notification, Organization, OrganizationTeacher, ClassInvitation, OrgClassRequest
 from examzen.utils import parse_questions_excel, parse_students_excel, send_notification
 from flask_login import login_user, current_user, logout_user, login_required
 
@@ -459,88 +459,481 @@ def import_questions(exam_id):
 @login_required
 def classes():
     if current_user.status == 'Student':
-        # Removed .all() as relationships might be mapped as lists or queries. 
-        # Error indicated 'InstrumentedList' so it's already a list.
-        my_classes = current_user.enrolled_classes
-        return render_template('classes_student.html', classes=my_classes)
-    else:
-        # Teacher
+        my_classes = Class.query.filter(Class.students.any(id=current_user.id)).all()
+        # Pending invitations for this student
+        pending = ClassInvitation.query.filter_by(
+            student_id=current_user.id, status='pending'
+        ).all()
+        return render_template('classes_student.html', classes=my_classes, pending_invitations=pending)
+
+    elif current_user.status == 'Examiner':
         form = ClassForm()
         if form.validate_on_submit():
+            # Check code uniqueness
+            if Class.query.filter_by(code=form.code.data).first():
+                flash('That class code is already taken. Choose another.', 'danger')
+                return redirect(url_for('classes'))
+
             new_class = Class(
                 name=form.name.data,
                 code=form.code.data,
                 created_by_id=current_user.id
             )
-            # Add Teachers
             new_class.teachers.append(current_user)
             db.session.add(new_class)
-            db.session.flush() # Get ID
+            db.session.flush()
 
-            # Process Students
-            added_count = 0
-            created_count = 0
+            # Collect all emails to invite
             all_emails = set()
-
-            # 1. Excel/CSV
             if form.students_file.data:
-                file_emails = parse_students_excel(form.students_file.data)
-                for e in file_emails:
+                for e in parse_students_excel(form.students_file.data):
                     all_emails.add(e.strip().lower())
-
-            # 2. Manual Emails
             if form.manual_emails.data:
-                manual_list = form.manual_emails.data.replace('\n', ',').split(',')
-                for e in manual_list:
+                for e in form.manual_emails.data.replace('\n', ',').split(','):
                     if e.strip():
                         all_emails.add(e.strip().lower())
 
-            # 3. Provision/Link
+            invited = 0
+            created = 0
             for email in all_emails:
                 user = User.query.filter_by(email=email).first()
                 if not user:
-                    # Create new student account
                     username = email.split('@')[0]
-                    # Simple duplicate username checker
                     if User.query.filter_by(username=username).first():
                         username = f"{username}{secrets.randbelow(9999)}"
-                    
                     hashed_pwd = bcrypt.generate_password_hash('Student123').decode('utf-8')
-                    user = User(
-                        username=username,
-                        email=email,
-                        status='Student',
-                        age=18, # Default
-                        password=hashed_pwd,
-                        organization_id=current_user.organization_id # Inherit Org if applicable
-                    )
+                    user = User(username=username, email=email, status='Student',
+                                age=18, password=hashed_pwd)
                     db.session.add(user)
-                    created_count += 1
-                
-                # Add to class if not already
-                if user not in new_class.students:
-                    new_class.students.append(user)
-                    added_count += 1
+                    db.session.flush()
+                    created += 1
+
+                # Only invite if not already in class and no pending invite
+                existing_invite = ClassInvitation.query.filter_by(
+                    class_id=new_class.id, student_id=user.id
+                ).first()
+                if not existing_invite:
+                    invite = ClassInvitation(
+                        class_id=new_class.id,
+                        student_id=user.id,
+                        invited_by_id=current_user.id
+                    )
+                    db.session.add(invite)
+                    # Notify student
+                    notif = Notification(
+                        sender_id=current_user.id,
+                        receiver_id=user.id,
+                        message=f'{current_user.username} has invited you to join class "{new_class.name}" ({new_class.code}).',
+                        type='class_invitation',
+                        related_id=new_class.id
+                    )
+                    db.session.add(notif)
+                    invited += 1
 
             db.session.commit()
-            
-            msg = 'Class created successfully!'
-            if added_count > 0:
-                msg += f' Added {added_count} students ({created_count} new accounts).'
-            flash(msg, 'success')
+            flash(f'Class "{new_class.name}" created! Invited {invited} students ({created} new accounts).', 'success')
             return redirect(url_for('classes'))
-            
-        my_classes = current_user.teaching_classes
+
+        my_classes = Class.query.filter(Class.teachers.any(id=current_user.id)).all()
         return render_template('classes_teacher.html', classes=my_classes, form=form)
+
+    else:
+        return redirect(url_for('dashboard'))
+
 
 @app.route('/classes/student')
 @login_required
 def classes_student():
-    """Separate route for students to view their classes"""
     if current_user.status != 'Student':
         return redirect(url_for('classes'))
-    my_classes = current_user.enrolled_classes
-    return render_template('classes_student.html', classes=my_classes)
+    my_classes = Class.query.filter(Class.students.any(id=current_user.id)).all()
+    pending = ClassInvitation.query.filter_by(student_id=current_user.id, status='pending').all()
+    return render_template('classes_student.html', classes=my_classes, pending_invitations=pending)
+
+
+@app.route('/class/invitation/<int:invite_id>/<action>')
+@login_required
+def respond_class_invitation(invite_id, action):
+    """Student accepts or rejects a class invitation"""
+    invite = ClassInvitation.query.get_or_404(invite_id)
+    if invite.student_id != current_user.id:
+        abort(403)
+    if invite.status != 'pending':
+        flash('This invitation has already been responded to.', 'info')
+        return redirect(url_for('classes'))
+
+    if action == 'accept':
+        invite.status = 'accepted'
+        invite.responded_at = datetime.utcnow()
+        # Add student to class
+        classroom = Class.query.get(invite.class_id)
+        if current_user not in classroom.students:
+            classroom.students.append(current_user)
+        # Mark the notification as actioned
+        notif = Notification.query.filter_by(
+            receiver_id=current_user.id, type='class_invitation', related_id=invite.class_id
+        ).first()
+        if notif:
+            notif.action_taken = True
+        db.session.commit()
+        flash(f'You have joined "{classroom.name}"!', 'success')
+
+    elif action == 'reject':
+        invite.status = 'rejected'
+        invite.responded_at = datetime.utcnow()
+        db.session.commit()
+        flash('Invitation declined.', 'info')
+
+    return redirect(url_for('classes'))
+
+
+@app.route('/class/<int:class_id>/invite_students', methods=['POST'])
+@login_required
+def invite_students_to_class(class_id):
+    """Teacher invites more students to an existing class"""
+    classroom = Class.query.get_or_404(class_id)
+    if not classroom.teachers.filter_by(id=current_user.id).first():
+        abort(403)
+
+    all_emails = set()
+    manual = request.form.get('manual_emails', '')
+    for e in manual.replace('\n', ',').split(','):
+        if e.strip():
+            all_emails.add(e.strip().lower())
+
+    if 'students_file' in request.files:
+        f = request.files['students_file']
+        if f and f.filename:
+            for e in parse_students_excel(f):
+                all_emails.add(e.strip().lower())
+
+    invited = 0
+    created = 0
+    for email in all_emails:
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            username = email.split('@')[0]
+            if User.query.filter_by(username=username).first():
+                username = f"{username}{secrets.randbelow(9999)}"
+            hashed_pwd = bcrypt.generate_password_hash('Student123').decode('utf-8')
+            user = User(username=username, email=email, status='Student', age=18, password=hashed_pwd)
+            db.session.add(user)
+            db.session.flush()
+            created += 1
+
+        # Skip if already in class
+        if classroom.students.filter_by(id=user.id).first():
+            continue
+
+        existing = ClassInvitation.query.filter_by(class_id=class_id, student_id=user.id, status='pending').first()
+        if not existing:
+            invite = ClassInvitation(class_id=class_id, student_id=user.id, invited_by_id=current_user.id)
+            db.session.add(invite)
+            notif = Notification(
+                sender_id=current_user.id,
+                receiver_id=user.id,
+                message=f'{current_user.username} has invited you to join class "{classroom.name}" ({classroom.code}).',
+                type='class_invitation',
+                related_id=class_id
+            )
+            db.session.add(notif)
+            invited += 1
+
+    db.session.commit()
+    flash(f'Invited {invited} students ({created} new accounts created).', 'success')
+    return redirect(url_for('view_class', class_id=class_id))
+
+
+@app.route('/class/<int:class_id>/add_teacher', methods=['POST'])
+@login_required
+def add_teacher_to_class(class_id):
+    """Teacher adds another teacher to their class"""
+    classroom = Class.query.get_or_404(class_id)
+    if not classroom.teachers.filter_by(id=current_user.id).first():
+        abort(403)
+
+    teacher_email = request.form.get('teacher_email', '').strip().lower()
+    teacher = User.query.filter_by(email=teacher_email, status='Examiner').first()
+    if not teacher:
+        flash('No Examiner account found with that email.', 'danger')
+        return redirect(url_for('view_class', class_id=class_id))
+
+    if classroom.teachers.filter_by(id=teacher.id).first():
+        flash('That teacher is already in this class.', 'info')
+        return redirect(url_for('view_class', class_id=class_id))
+
+    classroom.teachers.append(teacher)
+    notif = Notification(
+        sender_id=current_user.id,
+        receiver_id=teacher.id,
+        message=f'{current_user.username} has added you as a teacher to class "{classroom.name}".',
+        type='general',
+        related_id=class_id
+    )
+    db.session.add(notif)
+    db.session.commit()
+    flash(f'{teacher.username} added as a teacher.', 'success')
+    return redirect(url_for('view_class', class_id=class_id))
+
+
+@app.route('/class/<int:class_id>/submit_to_org', methods=['POST'])
+@login_required
+def submit_class_to_org(class_id):
+    """Teacher submits their class to an organization for management"""
+    classroom = Class.query.get_or_404(class_id)
+    if not classroom.teachers.filter_by(id=current_user.id).first():
+        abort(403)
+
+    org_email = request.form.get('org_email', '').strip().lower()
+    org_user = User.query.filter_by(email=org_email, status='Organization').first()
+    if not org_user or not org_user.organization_id:
+        flash('No Organization account found with that email.', 'danger')
+        return redirect(url_for('view_class', class_id=class_id))
+
+    org = Organization.query.get(org_user.organization_id)
+
+    # Check for existing request
+    existing = OrgClassRequest.query.filter_by(
+        class_id=class_id, organization_id=org.id, status='pending'
+    ).first()
+    if existing:
+        flash('A request to this organization is already pending.', 'info')
+        return redirect(url_for('view_class', class_id=class_id))
+
+    req = OrgClassRequest(
+        class_id=class_id,
+        organization_id=org.id,
+        teacher_id=current_user.id
+    )
+    db.session.add(req)
+    notif = Notification(
+        sender_id=current_user.id,
+        receiver_id=org_user.id,
+        message=f'Teacher {current_user.username} has submitted class "{classroom.name}" to your organization for management.',
+        type='org_class_request',
+        related_id=req.id if req.id else 0
+    )
+    db.session.add(notif)
+    db.session.flush()
+    # Update related_id now that req has an id
+    notif.related_id = req.id
+    db.session.commit()
+    flash('Class submitted to organization. Awaiting their acceptance.', 'success')
+    return redirect(url_for('view_class', class_id=class_id))
+
+
+@app.route('/org/class_request/<int:req_id>/<action>')
+@login_required
+def respond_org_class_request(req_id, action):
+    """Organization accepts or rejects a teacher's class submission"""
+    if current_user.status != 'Organization':
+        abort(403)
+
+    req = OrgClassRequest.query.get_or_404(req_id)
+    if req.organization_id != current_user.organization_id:
+        abort(403)
+
+    if action == 'accept':
+        req.status = 'accepted'
+        req.responded_at = datetime.utcnow()
+        req.classroom.organization_id = req.organization_id
+        db.session.commit()
+        # Notify the teacher
+        _sys_notify(req.teacher_id,
+                    f'Your class "{req.classroom.name}" has been accepted by {current_user.organization.name}.',
+                    type='general', related_id=req.class_id)
+        db.session.commit()
+        flash(f'Class "{req.classroom.name}" accepted into your organization.', 'success')
+    elif action == 'reject':
+        req.status = 'rejected'
+        req.responded_at = datetime.utcnow()
+        db.session.commit()
+        _sys_notify(req.teacher_id,
+                    f'Your class "{req.classroom.name}" was not accepted by {current_user.organization.name}.',
+                    type='general', related_id=req.class_id)
+        db.session.commit()
+        flash('Class request rejected.', 'info')
+
+    return redirect(url_for('organization_dashboard'))
+
+
+# ─── Helper: system notification (no sender) ──────────────────────────────────
+def _sys_notify(receiver_id, message, type='general', related_id=None):
+    """Create a system-generated notification (sender_id=None)."""
+    notif = Notification(
+        sender_id=None,
+        receiver_id=receiver_id,
+        message=message,
+        type=type,
+        related_id=related_id
+    )
+    db.session.add(notif)
+
+
+# ─── Teacher removes a student from their class ───────────────────────────────
+@app.route('/class/<int:class_id>/remove_student/<int:student_id>', methods=['POST'])
+@login_required
+def remove_student_from_class(class_id, student_id):
+    classroom = Class.query.get_or_404(class_id)
+    if not classroom.teachers.filter_by(id=current_user.id).first():
+        abort(403)
+    student = User.query.get_or_404(student_id)
+    if classroom.students.filter_by(id=student.id).first():
+        classroom.students.remove(student)
+        # Cancel any pending invite too
+        ClassInvitation.query.filter_by(
+            class_id=class_id, student_id=student_id, status='pending'
+        ).delete()
+        _sys_notify(student_id,
+                    f'You have been removed from class "{classroom.name}" by {current_user.username}.',
+                    type='general', related_id=class_id)
+        db.session.commit()
+        flash(f'{student.username} removed from class.', 'success')
+    else:
+        flash('Student not found in this class.', 'warning')
+    return redirect(url_for('view_class', class_id=class_id))
+
+
+# ─── Student leaves a class ───────────────────────────────────────────────────
+@app.route('/class/<int:class_id>/leave', methods=['POST'])
+@login_required
+def leave_class(class_id):
+    if current_user.status != 'Student':
+        abort(403)
+    classroom = Class.query.get_or_404(class_id)
+    if classroom.students.filter_by(id=current_user.id).first():
+        classroom.students.remove(current_user)
+        # Notify all teachers in the class
+        for teacher in classroom.teachers.all():
+            _sys_notify(teacher.id,
+                        f'Student {current_user.username} has left class "{classroom.name}".',
+                        type='general', related_id=class_id)
+        db.session.commit()
+        flash(f'You have left "{classroom.name}".', 'info')
+    else:
+        flash('You are not in this class.', 'warning')
+    return redirect(url_for('classes'))
+
+
+# ─── Organization removes a class from its management ─────────────────────────
+@app.route('/org/remove_class/<int:class_id>', methods=['POST'])
+@login_required
+def org_remove_class(class_id):
+    if current_user.status != 'Organization':
+        abort(403)
+    classroom = Class.query.get_or_404(class_id)
+    if classroom.organization_id != current_user.organization_id:
+        abort(403)
+    classroom.organization_id = None
+    # Mark the accepted request as removed
+    OrgClassRequest.query.filter_by(
+        class_id=class_id, organization_id=current_user.organization_id, status='accepted'
+    ).update({'status': 'removed'})
+    # Notify the class owner
+    if classroom.created_by_id:
+        _sys_notify(classroom.created_by_id,
+                    f'Your class "{classroom.name}" has been removed from {current_user.organization.name}.',
+                    type='general', related_id=class_id)
+    db.session.commit()
+    flash(f'Class "{classroom.name}" removed from your organization.', 'info')
+    return redirect(url_for('organization_dashboard'))
+
+
+# ─── Send notification (all user types) ───────────────────────────────────────
+@app.route('/notifications/send', methods=['POST'])
+@login_required
+def send_notification_route():
+    """
+    Unified notification sender.
+    Teachers  → individual student OR whole class
+    Org       → individual teacher OR all teachers in a class OR all teachers in org
+    Students  → their teacher (complaint-style)
+    """
+    message = request.form.get('message', '').strip()
+    if not message:
+        flash('Message cannot be empty.', 'warning')
+        return redirect(url_for('notifications'))
+
+    recipient_type = request.form.get('recipient_type')
+    sent = 0
+
+    if current_user.status == 'Examiner':
+        if recipient_type == 'student':
+            username = request.form.get('recipient', '').strip()
+            student = User.query.filter_by(username=username, status='Student').first()
+            if not student:
+                flash('Student not found.', 'danger')
+                return redirect(url_for('notifications'))
+            notif = Notification(sender_id=current_user.id, receiver_id=student.id,
+                                 message=message, type='general')
+            db.session.add(notif)
+            sent = 1
+        elif recipient_type == 'class':
+            class_id = request.form.get('class_id')
+            classroom = Class.query.get(class_id)
+            if not classroom or current_user not in classroom.teachers.all():
+                flash('Class not found or access denied.', 'danger')
+                return redirect(url_for('notifications'))
+            for student in classroom.students.all():
+                notif = Notification(sender_id=current_user.id, receiver_id=student.id,
+                                     message=message, type='general', related_id=classroom.id)
+                db.session.add(notif)
+                sent += 1
+
+    elif current_user.status == 'Organization':
+        org = current_user.organization
+        if recipient_type == 'teacher':
+            teacher_email = request.form.get('teacher_email', '').strip()
+            teacher = User.query.filter_by(email=teacher_email, status='Examiner').first()
+            if not teacher:
+                flash('Teacher not found.', 'danger')
+                return redirect(url_for('notifications'))
+            notif = Notification(sender_id=current_user.id, receiver_id=teacher.id,
+                                 message=message, type='general')
+            db.session.add(notif)
+            sent = 1
+        elif recipient_type == 'class_teachers':
+            class_id = request.form.get('class_id')
+            classroom = Class.query.filter_by(id=class_id, organization_id=org.id).first()
+            if not classroom:
+                flash('Class not found.', 'danger')
+                return redirect(url_for('notifications'))
+            for teacher in classroom.teachers.all():
+                notif = Notification(sender_id=current_user.id, receiver_id=teacher.id,
+                                     message=message, type='general', related_id=classroom.id)
+                db.session.add(notif)
+                sent += 1
+        elif recipient_type == 'all_teachers':
+            for cls in org.get_all_classes():
+                for teacher in cls.teachers.all():
+                    notif = Notification(sender_id=current_user.id, receiver_id=teacher.id,
+                                         message=message, type='general')
+                    db.session.add(notif)
+                    sent += 1
+
+    elif current_user.status == 'Student':
+        # Student can only message their teachers
+        teacher_username = request.form.get('recipient', '').strip()
+        teacher = User.query.filter_by(username=teacher_username, status='Examiner').first()
+        if not teacher:
+            flash('Teacher not found.', 'danger')
+            return redirect(url_for('notifications'))
+        # Verify they share a class
+        shared = any(
+            cls.students.filter_by(id=current_user.id).first()
+            for cls in Class.query.filter(Class.teachers.any(id=teacher.id))
+        )
+        if not shared:
+            flash('You can only message teachers of your classes.', 'danger')
+            return redirect(url_for('notifications'))
+        notif = Notification(sender_id=current_user.id, receiver_id=teacher.id,
+                             message=message, type='general')
+        db.session.add(notif)
+        sent = 1
+
+    db.session.commit()
+    flash(f'Message sent to {sent} recipient(s).', 'success')
+    return redirect(url_for('notifications'))
 
 @app.route('/class/<int:class_id>', methods=['GET', 'POST'])
 @login_required
@@ -616,38 +1009,40 @@ def add_questions(exam_id, q_idx=None):
     exam = Exam.query.get_or_404(exam_id)
     if exam.created_by_id != current_user.id:
         abort(403)
-        
-    # Get existing questions for this exam
+
     questions = Question.query.filter_by(exam_id=exam.id).order_by(Question.question_number).all()
-    
-    # If no q_idx provided, default to the next one to be added
+
     if q_idx is None:
         q_idx = len(questions) + 1
-        
-    # Boundary check
+
     if q_idx < 1: q_idx = 1
     if q_idx > exam.num_questions:
-        flash('You have reached the limit of questions for this exam.', 'info')
+        flash('All questions have been set.', 'info')
         return redirect(url_for('manage_exam', exam_id=exam.id))
 
-    # Find if this question already exists (for editing during flow)
     existing_q = next((q for q in questions if q.question_number == q_idx), None)
+
+    # Per-question option count: use existing question's option count if set,
+    # otherwise fall back to exam default. Teacher can override via form.
+    if existing_q:
+        default_num_options = len(existing_q.options) or exam.num_options
+    else:
+        default_num_options = exam.num_options
 
     if request.method == 'POST':
         question_text = request.form.get('question_text')
         options_texts = request.form.getlist('option_text[]')
         correct_option_idx = request.form.get('correct_option')
-        direction = request.form.get('direction', 'next') # 'next' or 'prev' or 'finish'
+        direction = request.form.get('direction', 'next')
+        # Teacher can override option count per question
+        num_options_this_q = len(options_texts)
 
         if existing_q:
-            # Update existing
             existing_q.question_text = question_text
-            # Clear and re-add options for simplicity or update them
             for opt in existing_q.options:
                 db.session.delete(opt)
             db.session.flush()
         else:
-            # Create new
             existing_q = Question(
                 exam_id=exam.id,
                 question_text=question_text,
@@ -657,28 +1052,32 @@ def add_questions(exam_id, q_idx=None):
             db.session.flush()
 
         for i, opt_text in enumerate(options_texts):
-            new_option = Examoption(
-                question_id=existing_q.id,
-                option_text=opt_text,
-                option_letter=chr(65 + i),
-                is_correct=(str(i) == correct_option_idx)
-            )
-            db.session.add(new_option)
+            if opt_text.strip():  # skip blank options
+                new_option = Examoption(
+                    question_id=existing_q.id,
+                    option_text=opt_text,
+                    option_letter=chr(65 + i),
+                    is_correct=(str(i) == correct_option_idx)
+                )
+                db.session.add(new_option)
 
         db.session.commit()
 
         if direction == 'prev' and q_idx > 1:
-            return redirect(url_for('add_questions', exam_id=exam.id, q_idx=q_idx-1))
+            return redirect(url_for('add_questions', exam_id=exam.id, q_idx=q_idx - 1))
         elif direction == 'next':
             if q_idx < exam.num_questions:
-                return redirect(url_for('add_questions', exam_id=exam.id, q_idx=q_idx+1))
+                return redirect(url_for('add_questions', exam_id=exam.id, q_idx=q_idx + 1))
             else:
-                flash('Final question saved.', 'success')
+                flash('All questions saved!', 'success')
                 return redirect(url_for('manage_exam', exam_id=exam.id))
         else:
             return redirect(url_for('manage_exam', exam_id=exam.id))
 
-    return render_template('add_questions.html', exam=exam, q_idx=q_idx, existing_q=existing_q, chr=chr)
+    return render_template('add_questions.html', exam=exam, q_idx=q_idx,
+                           existing_q=existing_q, chr=chr,
+                           default_num_options=default_num_options,
+                           all_questions=questions)
 
 
 @app.route('/edit_question/<int:question_id>', methods=['GET', 'POST'])
@@ -693,24 +1092,22 @@ def edit_single_question(question_id):
     if TakenExam.query.filter_by(exam_id=exam.id).first():
         flash('Editing is locked because students have already started or submitted this exam.', 'danger')
         return redirect(url_for('manage_exam', exam_id=exam.id))
-        
+
     if request.method == 'POST':
         question.question_text = request.form.get('question_text')
         options_texts = request.form.getlist('option_text[]')
         correct_option_idx = request.form.get('correct_option')
 
-        # Update options
-        for i, opt in enumerate(question.options):
-            if i < len(options_texts):
-                opt.option_text = options_texts[i]
-                opt.is_correct = (str(i) == correct_option_idx)
-        
-        # If there are NEW options (unlikely given fixed num_options but good for robustness)
-        if len(options_texts) > len(question.options):
-            for i in range(len(question.options), len(options_texts)):
+        # Fully replace options to support per-question option count changes
+        for opt in question.options:
+            db.session.delete(opt)
+        db.session.flush()
+
+        for i, opt_text in enumerate(options_texts):
+            if opt_text.strip():
                 new_opt = Examoption(
                     question_id=question.id,
-                    option_text=options_texts[i],
+                    option_text=opt_text,
                     option_letter=chr(65 + i),
                     is_correct=(str(i) == correct_option_idx)
                 )
@@ -817,60 +1214,31 @@ def organizations():
 @app.route('/notifications', methods=['GET', 'POST'])
 @login_required
 def notifications():
-    if request.method == 'POST' and current_user.status == 'Examiner':
-        title = request.form.get('title')
-        message = request.form.get('message')
-        recipient_type = request.form.get('recipient_type') # 'student' or 'class'
-        
-        if recipient_type == 'class':
-            class_id = request.form.get('class_id')
-            classroom = Class.query.filter_by(id=class_id).first()
-            if classroom and classroom.creator_id == current_user.id: # Ensure ownership
-                 count = 0
-                 for student in classroom.students:
-                     notif = Notification(title=title, message=message, receiver_id=student.id)
-                     db.session.add(notif)
-                     count += 1
-                 db.session.commit()
-                 flash(f'Notification sent to {count} students in {classroom.name}!', 'success')
-            else:
-                 # Check if teacher is just a teacher, not creator? usually creator is main owner. 
-                 # But model might be Many-to-Many 'teachers'.
-                 # Let's check: Class.teachers relationship.
-                 if classroom and current_user in classroom.teachers:
-                     count = 0
-                     for student in classroom.students:
-                         notif = Notification(title=title, message=message, receiver_id=student.id)
-                         db.session.add(notif)
-                         count += 1
-                     db.session.commit()
-                     flash(f'Notification sent to {count} students in {classroom.name}!', 'success')
-                 else:
-                     flash('Class not found or access denied.', 'danger')
-                     
-        else: # Individual student
-            recipient_username = request.form.get('recipient')
-            if recipient_username:
-                user = User.query.filter_by(username=recipient_username).first()
-                if user:
-                    notif = Notification(title=title, message=message, receiver_id=user.id)
-                    db.session.add(notif)
-                    db.session.commit()
-                    flash(f'Notification sent to {recipient_username}!', 'success')
-                else:
-                    flash('User not found.', 'danger')
-            else:
-                flash('Recipient username required.', 'warning')
-            
-        return redirect(url_for('notifications'))
+    user_notifications = Notification.query.filter_by(
+        receiver_id=current_user.id
+    ).order_by(Notification.created_at.desc()).all()
 
-    user_notifications = Notification.query.filter_by(receiver_id=current_user.id).order_by(Notification.created_at.desc()).all()
-    # Pass classes for the dropdown
+    # Context for the send form
     my_classes = []
+    my_teachers = []  # for students: teachers they share a class with
+
     if current_user.status == 'Examiner':
-        my_classes = current_user.teaching_classes
-        
-    return render_template('notifications.html', notifications=user_notifications, classes=my_classes)
+        my_classes = Class.query.filter(Class.teachers.any(id=current_user.id)).all()
+    elif current_user.status == 'Organization' and current_user.organization:
+        my_classes = current_user.organization.get_all_classes()
+    elif current_user.status == 'Student':
+        # Collect unique teachers from all enrolled classes
+        seen = set()
+        for cls in Class.query.filter(Class.students.any(id=current_user.id)).all():
+            for t in cls.teachers.all():
+                if t.id not in seen:
+                    my_teachers.append(t)
+                    seen.add(t.id)
+
+    return render_template('notifications.html',
+                           notifications=user_notifications,
+                           classes=my_classes,
+                           my_teachers=my_teachers)
 
 @app.route('/settings')
 @login_required
@@ -1056,20 +1424,78 @@ def edit_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
     if current_user.id != exam.created_by_id:
         abort(403)
+
+    # Block all edits if any student has already taken the exam
+    if TakenExam.query.filter_by(exam_id=exam_id).first():
+        flash('This exam cannot be edited because at least one student has already taken it.', 'danger')
+        return redirect(url_for('manage_exam', exam_id=exam_id))
+
     form = ExamForm()
+    old_num_questions = exam.num_questions
+    old_num_options = exam.num_options
+
     if form.validate_on_submit():
+        new_num_questions = form.num_questions.data
+        new_num_options = form.num_options.data
+
+        # Update basic fields
         exam.name = form.name.data
-        exam.num_questions = form.num_questions.data
-        exam.num_options = form.num_options.data
         exam.num_students = form.num_students.data
         exam.exam_date = form.start_time.data
         exam.start_time = form.start_time.data
         exam.end_time = form.end_time.data
         exam.duration = form.duration.data
         exam.is_private = form.is_private.data
-        db.session.commit()
+
+        # Handle question count change
+        if new_num_questions < old_num_questions:
+            # Need to delete questions — store new count in session and redirect
+            exam.num_questions = new_num_questions
+            exam.num_options = new_num_options
+            db.session.commit()
+            # Find questions that are beyond the new limit
+            excess_questions = Question.query.filter_by(exam_id=exam_id)\
+                .filter(Question.question_number > new_num_questions)\
+                .order_by(Question.question_number).all()
+            if excess_questions:
+                flash(f'You reduced questions from {old_num_questions} to {new_num_questions}. '
+                      f'Please confirm which questions to remove.', 'warning')
+                return redirect(url_for('exam_trim_questions', exam_id=exam_id))
+        else:
+            exam.num_questions = new_num_questions
+            exam.num_options = new_num_options
+            db.session.commit()
+
+        # If options count changed, update existing questions' options
+        if new_num_options != old_num_options:
+            for question in exam.questions:
+                current_opts = len(question.options)
+                if new_num_options > current_opts:
+                    # Add missing options
+                    for i in range(current_opts, new_num_options):
+                        new_opt = Examoption(
+                            question_id=question.id,
+                            option_text='',
+                            option_letter=chr(65 + i),
+                            is_correct=False
+                        )
+                        db.session.add(new_opt)
+                elif new_num_options < current_opts:
+                    # Remove excess options (keep first new_num_options)
+                    opts_sorted = sorted(question.options, key=lambda o: o.option_letter)
+                    for opt in opts_sorted[new_num_options:]:
+                        db.session.delete(opt)
+            db.session.commit()
+
         flash('Exam updated successfully!', 'success')
-        return redirect(url_for('manage_exam', exam_id=exam.id))
+
+        # If questions were added, go to add_questions for the new ones
+        if new_num_questions > old_num_questions:
+            flash(f'You added {new_num_questions - old_num_questions} new question(s). Please fill them in.', 'info')
+            return redirect(url_for('add_questions', exam_id=exam_id, q_idx=old_num_questions + 1))
+
+        return redirect(url_for('manage_exam', exam_id=exam_id))
+
     elif request.method == 'GET':
         form.name.data = exam.name
         form.num_questions.data = exam.num_questions
@@ -1079,7 +1505,35 @@ def edit_exam(exam_id):
         form.end_time.data = exam.end_time
         form.duration.data = exam.duration
         form.is_private.data = exam.is_private
-    return render_template('create_exam.html', form=form, title='Edit Exam', is_edit=True)
+
+    return render_template('create_exam.html', form=form, title='Edit Exam', is_edit=True, exam=exam)
+
+
+@app.route('/exam/<int:exam_id>/trim_questions', methods=['GET', 'POST'])
+@login_required
+def exam_trim_questions(exam_id):
+    """Let teacher choose which questions to delete when reducing question count."""
+    exam = Exam.query.get_or_404(exam_id)
+    if exam.created_by_id != current_user.id:
+        abort(403)
+
+    # Questions beyond the new limit are candidates for deletion
+    excess = Question.query.filter_by(exam_id=exam_id)\
+        .filter(Question.question_number > exam.num_questions)\
+        .order_by(Question.question_number).all()
+
+    if request.method == 'POST':
+        ids_to_delete = request.form.getlist('delete_ids')
+        for qid in ids_to_delete:
+            q = Question.query.get(int(qid))
+            if q and q.exam_id == exam_id:
+                db.session.delete(q)
+        db.session.commit()
+        flash('Selected questions removed.', 'success')
+        return redirect(url_for('manage_exam', exam_id=exam_id))
+
+    return render_template('exam_trim_questions.html', exam=exam, excess=excess)
+
 
 @app.route('/delete_exam/<int:exam_id>', methods=['GET', 'POST'])
 @login_required
@@ -1175,7 +1629,7 @@ def take_exam(exam_id):
         # Check if they have answers (already submitted)
         if Answer.query.filter_by(user_id=current_user.id, exam_id=exam_id).first():
             flash('You have already submitted this exam.', 'info')
-            return redirect(url_for('view_results', exam_id=exam_id))
+            return redirect(url_for('view_exam_results', exam_id=exam_id))
     else:
         # Create attempt record when they first visit
         taken_exam = TakenExam(user_id=current_user.id, exam_id=exam_id, taken_at=now)
@@ -1189,43 +1643,60 @@ def take_exam(exam_id):
         
     questions = Question.query.filter_by(exam_id=exam_id).order_by(Question.question_number).all()
     
-    return render_template('take_exam.html', 
-                           exam=exam, 
-                           questions=questions, 
-                           deadline=personal_deadline.isoformat())
+    # Pass deadline as UTC ISO string with Z suffix so JS parses it unambiguously
+    deadline_str = personal_deadline.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    return render_template('take_exam.html',
+                           exam=exam,
+                           questions=questions,
+                           deadline=deadline_str)
 
 @app.route("/submit_exam/<int:exam_id>", methods=['POST'])
 @login_required
 def submit_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
+
+    # Prevent double submission
+    already_answered = Answer.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+    if already_answered:
+        flash('You have already submitted this exam.', 'info')
+        return redirect(url_for('view_exam_results', exam_id=exam_id))
+
     questions = Question.query.filter_by(exam_id=exam_id).all()
-    
     correct_answers = 0
     total_questions = len(questions)
-    
+
     for question in questions:
         answer = request.form.get(f'question_{question.id}')
         correct_option = Examoption.query.filter_by(question_id=question.id, is_correct=True).first()
-        
+
         if answer and correct_option:
             is_correct = (answer == correct_option.option_letter)
-            new_answer = Answer(exam_id=exam_id, question_id=question.id, user_id=current_user.id, 
-                                answer=answer, is_correct=is_correct)
-            db.session.add(new_answer)
-            
-            if is_correct:
-                correct_answers += 1
-    
+        else:
+            is_correct = False
+
+        new_answer = Answer(
+            exam_id=exam_id,
+            question_id=question.id,
+            user_id=current_user.id,
+            answer=answer or '',
+            is_correct=is_correct
+        )
+        db.session.add(new_answer)
+        if is_correct:
+            correct_answers += 1
+
+    # Update existing TakenExam record (created when exam was started)
+    taken_exam = TakenExam.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+    if not taken_exam:
+        taken_exam = TakenExam(user_id=current_user.id, exam_id=exam_id)
+        db.session.add(taken_exam)
+
     db.session.commit()
-    
-    # Record TakenExam entry
-    taken_exam = TakenExam(user_id=current_user.id, exam_id=exam_id)
-    db.session.add(taken_exam)
-    db.session.commit()
-    
-    score = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
-    flash(f'Exam submitted successfully. Your score: {score:.2f}%', 'success')
-    return redirect(url_for('dashboard'))
+
+    score = (correct_answers / total_questions * 100) if total_questions > 0 else 0
+    flash(f'Exam submitted! Your score: {score:.1f}% ({correct_answers}/{total_questions} correct)', 'success')
+    return redirect(url_for('view_exam_results', exam_id=exam_id))
 
 @app.route("/view_exam_results/<int:exam_id>")
 @login_required
@@ -1340,7 +1811,12 @@ def create_organization():
 def organization_dashboard():
     if current_user.status != 'Organization' or not current_user.organization:
         abort(403)
-    return render_template('org_admin_dashboard.html', title='Organization Dashboard', organization=current_user.organization)
+    org = current_user.organization
+    pending_requests = OrgClassRequest.query.filter_by(
+        organization_id=org.id, status='pending'
+    ).all()
+    return render_template('org_admin_dashboard.html', title='Organization Dashboard',
+                           organization=org, pending_requests=pending_requests)
 
 @app.route("/create_category", methods=['GET', 'POST'])
 @login_required

@@ -91,6 +91,12 @@
     margin: 10px 0 12px;
 }
 
+.q-divider-2 {
+    border: none;
+    border-top: 1px solid #33023d;
+    margin: 10px 0 14px;   
+}
+
 /* Options layout */
 .q-options {
     display: flex;
@@ -177,7 +183,7 @@
     <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="font-size: 0.85rem;">← Back to Dashboard</a>
 </div>
 
-<div class="metrics-grid">
+<div class="metrics-grid grid-2col">
     <div class="card" style="grid-column: span 2;">
         <div class="card-header">
             <span>{{ exam.name }}</span>
@@ -187,7 +193,7 @@
                 <a href="{{ url_for('delete_exam', exam_id=exam.id) }}" class="btn btn-danger">Delete Exam</a>
             </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.95rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.95rem;" class="grid-equal">
             <div>
                 <p><strong>Date:</strong> {{ exam.exam_date }}</p>
                 <p><strong>Time:</strong> {{ exam.start_time.strftime('%H:%M') }} - {{ exam.end_time.strftime('%H:%M') }}</p>
@@ -228,8 +234,7 @@
     {% if exam.questions %}
     <div class="questions-list">
         {% for q in exam.questions %}
-        <div class="q-card"
-             onclick="window.location.href='{{ url_for('edit_single_question', question_id=q.id) }}'">
+        <div class="q-card" data-href="{{ url_for('edit_single_question', question_id=q.id) }}">
 
             <!-- Question number badge + text -->
             <div class="q-header">
@@ -241,13 +246,15 @@
 
             <!-- Options -->
             <div class="q-options">
-                {% for opt in q.options %}
+                {% for opt in q.options|sort(attribute='option_letter') %}
                 <span class="q-option {% if opt.is_correct %}correct{% endif %}">
                     {% if opt.is_correct %}<span class="opt-tick"></span>{% endif %}
                     <strong>{{ opt.option_letter }})</strong>&nbsp;{{ opt.option_text }}
                 </span>
                 {% endfor %}
             </div>
+
+            <hr class="q-divider-2">
 
         </div>
         {% endfor %}
@@ -259,4 +266,14 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+    document.querySelectorAll('.q-card[data-href]').forEach(function(card) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', function() {
+            window.location.href = this.dataset.href;
+        });
+    });
+</script>
+
 {% endblock %}

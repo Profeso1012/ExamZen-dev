@@ -119,10 +119,42 @@
 
         <!-- Classes Section -->
         <div class="col-lg-8 mb-4">
+
+            <!-- Pending Class Requests -->
+            {% if pending_requests %}
+            <div class="card shadow-sm border-0 mb-4" style="border-left: 4px solid #E65100 !important;">
+                <div class="card-header bg-white font-weight-bold" style="color: #E65100;">
+                    <i class="fas fa-inbox mr-2"></i> Pending Class Requests ({{ pending_requests|length }})
+                </div>
+                <div class="card-body">
+                    {% for req in pending_requests %}
+                    <div class="teacher-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:10px;">
+                        <div>
+                            <div style="font-weight:600;">{{ req.classroom.name }}
+                                <code style="font-size:0.8rem; background:#eee; padding:2px 6px; border-radius:4px;">{{ req.classroom.code }}</code>
+                            </div>
+                            <div style="font-size:0.85rem; color:#666;">
+                                Submitted by <strong>{{ req.teacher.username }}</strong> · {{ req.created_at.strftime('%b %d, %Y') }}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <a href="{{ url_for('respond_org_class_request', req_id=req.id, action='accept') }}" class="btn btn-primary" style="padding:6px 14px; font-size:0.85rem;">
+                                <i class="fas fa-check"></i> Accept
+                            </a>
+                            <a href="{{ url_for('respond_org_class_request', req_id=req.id, action='reject') }}" class="btn btn-outline" style="padding:6px 14px; font-size:0.85rem;">
+                                <i class="fas fa-times"></i> Reject
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Accepted Classes -->
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white font-weight-bold">
-                    <i class="fas fa-chalkboard mr-2"></i> Teacher Classes
-                    <small class="text-muted">(from accepted teachers)</small>
+                    <i class="fas fa-chalkboard mr-2"></i> Managed Classes
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -141,22 +173,25 @@
                                 {% set all_classes = organization.get_all_classes() %}
                                 {% for class in all_classes %}
                                 <tr>
-                                    <td>
-                                        <div class="font-weight-bold">{{ class.name }}</div>
-                                    </td>
+                                    <td><div class="font-weight-bold">{{ class.name }}</div></td>
                                     <td><code class="text-primary">{{ class.code }}</code></td>
                                     <td>{{ class.teachers.first().username if class.teachers.first() else 'N/A' }}</td>
                                     <td><span class="badge badge-pill badge-light border">{{ class.students.count() }}</span></td>
                                     <td><span class="badge badge-pill badge-light border">{{ class.exams|length }}</span></td>
                                     <td class="text-right">
-                                        <a href="{{ url_for('view_class', class_id=class.id) }}"
-                                            class="btn btn-sm btn-outline-primary">View</a>
+                                        <a href="{{ url_for('view_class', class_id=class.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        <form method="POST" action="{{ url_for('org_remove_class', class_id=class.id) }}"
+                                              style="display:inline;"
+                                              onsubmit="return confirm('Remove this class from your organization?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                            <button type="submit" class="btn btn-sm btn-danger" style="background:#FFEBEB; color:#D93025; border-color:#FFCDCD;">Remove</button>
+                                        </form>
                                     </td>
                                 </tr>
                                 {% else %}
                                 <tr>
                                     <td colspan="6" class="text-center py-4 text-muted">
-                                        No classes available yet. Invite teachers to see their classes here.
+                                        No classes yet. Teachers submit their classes to you for management.
                                     </td>
                                 </tr>
                                 {% endfor %}

@@ -34,7 +34,7 @@ def migrate_database():
                 else:
                     print("✓ action_taken column already exists\n")
             
-            # Create all tables (including organization_teacher)
+            # Create all tables (including organization_teacher, class_invitation, org_class_request)
             print("📝 Creating/updating all tables...")
             db.create_all()
             print("✅ All tables created/updated\n")

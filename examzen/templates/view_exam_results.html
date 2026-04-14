@@ -56,18 +56,14 @@
 
 <div class="card" style="margin-top: 30px; background-color: #FAFCFC;">
   <div class="card-header">Report an Issue / Send Complaint</div>
-  <form action="{{ url_for('submit_complaint') }}" method="POST">
-    <!-- Assuming generic complaint for now. Ideally pass exam_id hidden -->
+  <form action="{{ url_for('submit_exam_complaint', exam_id=exam.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <div class="form-group">
-      <label class="form-label">Subject</label>
-      <input type="text" name="subject" class="form-control" value="Issue with Exam: {{ exam.name }}" readonly>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <textarea name="description" class="form-control" rows="3" placeholder="Describe the issue..."></textarea>
+      <label class="form-label">Describe the issue</label>
+      <textarea name="complaint_message" class="form-control" rows="3" required placeholder="Describe the issue with this exam or your result..."></textarea>
     </div>
     <div style="text-align: right;">
-      <button type="submit" class="btn btn-primary">Send Complaint</button>
+      <button type="submit" class="btn btn-primary">Send Complaint to Teacher</button>
     </div>
   </form>
 </div>

@@ -131,11 +131,8 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div class="card"
-                style="background-color: {% if category == 'success' %}#E6F4EA{% else %}#FCE8E6{% endif %}; border-color: transparent; margin-bottom: 20px;">
-                <span
-                    style="color: {% if category == 'success' %}#137333{% else %}#C5221F{% endif %}; font-weight:500;">{{
-                    message }}</span>
+            <div class="flash-msg flash-{{ category }}">
+                <span>{{ message }}</span>
             </div>
             {% endfor %}
             {% endif %}

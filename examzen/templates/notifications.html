@@ -56,6 +56,21 @@
         color: #6A1B9A;
     }
 
+    .type-class_invitation {
+        background: #E8F5E9;
+        color: #2E7D32;
+    }
+
+    .type-org_class_request {
+        background: #FFF8E1;
+        color: #F57F17;
+    }
+
+    .type-system {
+        background: #ECEFF1;
+        color: #546E7A;
+    }
+
     .notification-actions {
         margin-top: 10px;
         display: flex;
@@ -84,8 +99,7 @@
     }
 </style>
 
-<div class="metrics-grid"
-    style="align-items: start; {% if current_user.status == 'Examiner' %}grid-template-columns: 2fr 1fr;{% else %}grid-template-columns: 1fr;{% endif %}">
+<div class="metrics-grid grid-2col" style="align-items: start;">
 
     <!-- Notification List -->
     <div class="card">
@@ -112,7 +126,7 @@
                     {{ notif.message }}
                 </div>
 
-                <!-- Invitation Actions -->
+                <!-- Invitation Actions (org teacher invitation) -->
                 {% if notif.type == 'invitation' and not notif.action_taken %}
                 <div class="notification-actions">
                     <a href="{{ url_for('respond_invitation', notification_id=notif.id, action='accept') }}" 
@@ -130,6 +144,39 @@
                 </div>
                 {% endif %}
 
+                <!-- Class Invitation Actions -->
+                {% if notif.type == 'class_invitation' and not notif.action_taken %}
+                {% set invite = notif.related_id %}
+                <div class="notification-actions">
+                    <a href="{{ url_for('respond_class_invitation', invite_id=notif.related_id, action='accept') }}"
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-check"></i> Join Class
+                    </a>
+                    <a href="{{ url_for('respond_class_invitation', invite_id=notif.related_id, action='reject') }}"
+                       class="btn btn-outline btn-sm">
+                        <i class="fas fa-times"></i> Decline
+                    </a>
+                </div>
+                {% elif notif.type == 'class_invitation' and notif.action_taken %}
+                <div style="margin-top: 10px; color: #666; font-size: 0.85rem;">
+                    <i class="fas fa-check-circle"></i> Responded
+                </div>
+                {% endif %}
+
+                <!-- Org Class Request Actions (for teachers) -->
+                {% if notif.type == 'org_class_request' and current_user.status == 'Organization' and not notif.action_taken %}
+                <div class="notification-actions">
+                    <a href="{{ url_for('respond_org_class_request', req_id=notif.related_id, action='accept') }}"
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-check"></i> Accept Class
+                    </a>
+                    <a href="{{ url_for('respond_org_class_request', req_id=notif.related_id, action='reject') }}"
+                       class="btn btn-outline btn-sm">
+                        <i class="fas fa-times"></i> Reject
+                    </a>
+                </div>
+                {% endif %}
+
                 <!-- Complaint View (for teachers) -->
                 {% if notif.type == 'complaint' and current_user.status == 'Examiner' %}
                 <div class="notification-actions">
@@ -142,8 +189,8 @@
 
                 <!-- Mark as Read -->
                 {% if not notif.is_read %}
-                <button onclick="markAsRead({{ notif.id }})" 
-                        class="btn btn-outline btn-sm" 
+                <button data-notif-id="{{ notif.id }}"
+                        class="btn btn-outline btn-sm mark-read-btn"
                         style="margin-top: 10px; font-size: 0.8rem;">
                     <i class="fas fa-check"></i> Mark as Read
                 </button>
@@ -162,24 +209,27 @@
     <!-- Send Notification (Examiner Only) -->
     {% if current_user.status == 'Examiner' %}
     <div class="card">
-        <div class="card-header">Send Notification</div>
-        <form method="POST">
+        <div class="card-header">Send Message</div>
+        <form method="POST" action="{{ url_for('send_notification_route') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="form-group">
-                <label class="form-label">Recipient Type</label>
-                <div style="display: flex; gap: 15px;">
-                    <label style="display:flex;align-items:center;"><input type="radio" name="recipient_type"
-                            value="student" checked onchange="toggleRecipient('student')"> Student</label>
-                    <label style="display:flex;align-items:center;"><input type="radio" name="recipient_type"
-                            value="class" onchange="toggleRecipient('class')"> Class</label>
+                <label class="form-label">Send To</label>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input type="radio" name="recipient_type" value="student" checked onchange="toggleRecipient(this.value)"> Individual Student
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input type="radio" name="recipient_type" value="class" onchange="toggleRecipient(this.value)"> Whole Class
+                    </label>
                 </div>
             </div>
 
-            <div class="form-group" id="studentInput">
+            <div class="form-group" id="input-student">
                 <label class="form-label">Student Username</label>
                 <input type="text" name="recipient" class="form-control" placeholder="Enter username">
             </div>
 
-            <div class="form-group" id="classInput" style="display:none;">
+            <div class="form-group" id="input-class" style="display:none;">
                 <label class="form-label">Select Class</label>
                 <select name="class_id" class="form-control">
                     {% for cls in classes %}
@@ -187,24 +237,86 @@
                     {% endfor %}
                 </select>
                 {% if not classes %}
-                <small style="color: red;">No classes found. Create a class first.</small>
+                <small style="color:#c00;">No classes yet. Create a class first.</small>
                 {% endif %}
             </div>
 
             <div class="form-group">
-                <label class="form-label">Title</label>
-                <input type="text" name="title" class="form-control" required>
+                <label class="form-label">Message</label>
+                <textarea name="message" class="form-control" rows="4" required placeholder="Write your message..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Send</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if current_user.status == 'Organization' %}
+    <div class="card">
+        <div class="card-header">Send Message</div>
+        <form method="POST" action="{{ url_for('send_notification_route') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="form-group">
+                <label class="form-label">Send To</label>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input type="radio" name="recipient_type" value="teacher" checked onchange="toggleRecipient(this.value)"> Individual Teacher
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input type="radio" name="recipient_type" value="class_teachers" onchange="toggleRecipient(this.value)"> All Teachers in a Class
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input type="radio" name="recipient_type" value="all_teachers" onchange="toggleRecipient(this.value)"> All Teachers in Org
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group" id="input-teacher">
+                <label class="form-label">Teacher Email</label>
+                <input type="email" name="teacher_email" class="form-control" placeholder="teacher@example.com">
+            </div>
+
+            <div class="form-group" id="input-class_teachers" style="display:none;">
+                <label class="form-label">Select Class</label>
+                <select name="class_id" class="form-control">
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}">{{ cls.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Message</label>
-                <textarea name="message" class="form-control" rows="4" required></textarea>
+                <textarea name="message" class="form-control" rows="4" required placeholder="Write your message..."></textarea>
             </div>
-
-            <div style="text-align: right;">
-                <button type="submit" class="btn btn-primary">Send Message</button>
-            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Send</button>
         </form>
+    </div>
+    {% endif %}
+
+    {% if current_user.status == 'Student' %}
+    <div class="card">
+        <div class="card-header">Message a Teacher</div>
+        {% if my_teachers %}
+        <form method="POST" action="{{ url_for('send_notification_route') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="recipient_type" value="teacher_from_student" />
+            <div class="form-group">
+                <label class="form-label">Select Teacher</label>
+                <select name="recipient" class="form-control">
+                    {% for t in my_teachers %}
+                    <option value="{{ t.username }}">{{ t.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea name="message" class="form-control" rows="4" required placeholder="Write your message..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Send</button>
+        </form>
+        {% else %}
+        <p style="color:#999; font-size:0.9rem;">You must be enrolled in a class to message a teacher.</p>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -212,28 +324,25 @@
 
 <script>
     function toggleRecipient(type) {
-        if (type === 'student') {
-            document.getElementById('studentInput').style.display = 'block';
-            document.getElementById('classInput').style.display = 'none';
-        } else {
-            document.getElementById('studentInput').style.display = 'none';
-            document.getElementById('classInput').style.display = 'block';
-        }
+        ['student','class','teacher','class_teachers'].forEach(id => {
+            const el = document.getElementById('input-' + id);
+            if (el) el.style.display = 'none';
+        });
+        const target = document.getElementById('input-' + type);
+        if (target) target.style.display = 'block';
     }
 
-    function markAsRead(notifId) {
-        fetch(`/notification/${notifId}/mark_read`, {
+    // Mark as read via data attribute — no inline onclick needed
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.mark-read-btn');
+        if (!btn) return;
+        const notifId = btn.dataset.notifId;
+        fetch('/notification/' + notifId + '/mark_read', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: { 'Content-Type': 'application/json' }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                location.reload();
-            }
-        });
-    }
+        .then(r => r.json())
+        .then(d => { if (d.status === 'success') location.reload(); });
+    });
 </script>
 {% endblock %}

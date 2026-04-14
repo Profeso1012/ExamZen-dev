@@ -57,12 +57,8 @@ class Organization(db.Model):
         return [User.query.get(assoc.teacher_id) for assoc in accepted]
     
     def get_all_classes(self):
-        """Get all classes from accepted teachers"""
-        teachers = self.get_accepted_teachers()
-        all_classes = []
-        for teacher in teachers:
-            all_classes.extend(teacher.teaching_classes.all())
-        return all_classes
+        """Get all classes accepted into this organization"""
+        return Class.query.filter_by(organization_id=self.id).all()
 
     def __repr__(self):
         return f"Organization('{self.name}')"
@@ -109,9 +105,46 @@ class Class(db.Model):
     students = db.relationship('User', secondary=student_classes, backref='enrolled_classes', lazy='dynamic')
     teachers = db.relationship('User', secondary=teacher_classes, backref='teaching_classes', lazy='dynamic')
     exams = db.relationship('Exam', backref='assigned_class', lazy=True)
+    invitations = db.relationship('ClassInvitation', backref='classroom', lazy='dynamic',
+                                  cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"Class('{self.name}', '{self.code}')"
+
+
+# Student class invitation (teacher invites student → student accepts/rejects)
+class ClassInvitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    invited_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    responded_at = db.Column(db.DateTime, nullable=True)
+
+    student = db.relationship('User', foreign_keys=[student_id], backref='class_invitations')
+    invited_by = db.relationship('User', foreign_keys=[invited_by_id])
+
+    def __repr__(self):
+        return f"ClassInvitation(class={self.class_id}, student={self.student_id}, status={self.status})"
+
+
+# Teacher submits class to an organization for the org to accept/manage
+class OrgClassRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    responded_at = db.Column(db.DateTime, nullable=True)
+
+    classroom = db.relationship('Class', backref='org_requests')
+    organization = db.relationship('Organization', backref='class_requests')
+    teacher = db.relationship('User', backref='submitted_class_requests')
+
+    def __repr__(self):
+        return f"OrgClassRequest(class={self.class_id}, org={self.organization_id}, status={self.status})"
 
 # Notification Model
 class Notification(db.Model):

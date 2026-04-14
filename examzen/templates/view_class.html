@@ -1,75 +1,275 @@
 {% extends "dashboard_layout.html" %}
-{% block title %}{{ classroom.name }} - ExamZen{% endblock %}
+{% block title %}{{ classroom.name }}{% endblock %}
 {% block header %}{{ classroom.name }}{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 20px;">
-    <a href="{{ url_for('classes') }}" class="btn btn-outline" style="font-size: 0.85rem;">← Back to Classes</a>
+{% set is_teacher = classroom.teachers.filter_by(id=current_user.id).first() is not none %}
+{% set is_student = classroom.students.filter_by(id=current_user.id).first() is not none %}
+
+<style>
+    .section-card { margin-bottom: 20px; }
+    .student-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px; background: #f5f5f5; border-radius: 20px;
+        font-size: 0.85rem; margin: 4px;
+    }
+    .teacher-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px; background: rgba(45,27,105,0.08); border-radius: 20px;
+        font-size: 0.85rem; margin: 4px; color: var(--primary-color); font-weight: 600;
+    }
+    .pending-chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 10px; background: #FFF3E0; border-radius: 20px;
+        font-size: 0.8rem; margin: 4px; color: #E65100;
+    }
+    .tab-btn {
+        padding: 8px 20px; border: none; background: none; cursor: pointer;
+        font-size: 0.95rem; color: #666; border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+    }
+    .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    @media (max-width: 768px) {
+        .view-grid { grid-template-columns: 1fr !important; }
+        .tab-btn { padding: 8px 12px; font-size: 0.85rem; }
+    }
+</style>
+
+<div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <a href="{{ url_for('classes') }}" class="btn btn-outline" style="font-size: 0.85rem;">← Back</a>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <span style="background: var(--secondary-color); color: var(--primary-color); padding: 4px 12px; border-radius: 12px; font-weight: 700; font-size: 0.85rem;">
+            {{ classroom.code }}
+        </span>
+        {% if classroom.organization_id %}
+        <span style="background: rgba(45,27,105,0.1); color: var(--primary-color); padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">
+            <i class="fas fa-building"></i> {{ classroom.org.name }}
+        </span>
+        {% endif %}
+    </div>
 </div>
 
-<div class="metrics-grid">
-    <div class="card">
-        <div class="card-header">Class Details</div>
-        <div style="font-size: 1rem; line-height: 1.6;">
-            <p><strong>Class Name:</strong> {{ classroom.name }}</p>
-            <p><strong>Class Code:</strong> <span style="font-family: monospace; background: #eee; padding: 2px 5px;">{{
-                    classroom.code }}</span></p>
-            {% if classroom.teachers.first() %}
-            <p><strong>Teacher:</strong> {{ classroom.teachers.first().username }}</p>
+<!-- Tabs -->
+<div style="border-bottom: 1px solid #eee; margin-bottom: 20px; display: flex; gap: 0; overflow-x: auto;">
+    <button class="tab-btn active" onclick="showTab('students')">
+        <i class="fas fa-users"></i> Students ({{ classroom.students.count() }})
+    </button>
+    <button class="tab-btn" onclick="showTab('teachers')">
+        <i class="fas fa-chalkboard-teacher"></i> Teachers ({{ classroom.teachers.count() }})
+    </button>
+    <button class="tab-btn" onclick="showTab('exams')">
+        <i class="fas fa-file-alt"></i> Exams ({{ classroom.exams|length }})
+    </button>
+    {% if is_teacher %}
+    <button class="tab-btn" onclick="showTab('manage')">
+        <i class="fas fa-cog"></i> Manage
+    </button>
+    {% endif %}
+</div>
+
+<!-- Students Tab -->
+<div id="tab-students" class="tab-pane active">
+    <div class="card section-card">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Enrolled Students ({{ classroom.students.count() }})</span>
+            {% if is_student %}
+            <form method="POST" action="{{ url_for('leave_class', class_id=classroom.id) }}"
+                  onsubmit="return confirm('Leave this class? You will need a new invitation to rejoin.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-outline" style="padding:4px 12px; font-size:0.8rem; color:#c00; border-color:#c00;">
+                    <i class="fas fa-sign-out-alt"></i> Leave Class
+                </button>
+            </form>
             {% endif %}
         </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">Teachers</div>
-        <ul style="padding-left: 20px;">
-            {% for teacher in classroom.teachers %}
-            <li>{{ teacher.username }}</li>
-            {% else %}
-            <li style="color: #999;">No teachers assigned</li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
-
-<div class="metrics-grid" style="margin-top: 20px; grid-template-columns: 2fr 1fr; align-items: start;">
-    <div class="card">
-        <div class="card-header">Students ({{ classroom.students|length }})</div>
-        {% if classroom.students %}
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+        {% if classroom.students.count() > 0 %}
+        <div style="padding: 10px 0;">
             {% for student in classroom.students %}
-            <div style="padding: 10px; border: 1px solid #eee; border-radius: 4px; text-align: center;">
-                <div style="font-weight: 500;">{{ student.username }}</div>
-                <div style="font-size: 0.8rem; color: #999;">{{ student.email }}</div>
+            <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:#f5f5f5; border-radius:20px; margin:4px;">
+                <i class="fas fa-user-circle" style="color:var(--primary-color);"></i>
+                <span style="font-size:0.85rem;">{{ student.username }}</span>
+                <span style="color:#aaa; font-size:0.75rem;">{{ student.email }}</span>
+                {% if is_teacher %}
+                <form method="POST" action="{{ url_for('remove_student_from_class', class_id=classroom.id, student_id=student.id) }}"
+                      style="display:inline;" onsubmit="return confirm('Remove {{ student.username }} from this class?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" style="background:none; border:none; cursor:pointer; color:#c00; padding:0 2px;" title="Remove student">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </form>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p style="color: #666;">No students enrolled yet.</p>
+        <p style="color: #999; padding: 20px 0;">No students enrolled yet.</p>
+        {% endif %}
+
+        {% if is_teacher %}
+        {% set pending = classroom.invitations.filter_by(status='pending').all() %}
+        {% if pending %}
+        <div style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px;">
+            <div style="font-size: 0.9rem; font-weight: 600; color: #E65100; margin-bottom: 8px;">
+                <i class="fas fa-hourglass-half"></i> Pending Invitations
+            </div>
+            <div style="display: flex; flex-wrap: wrap;">
+                {% for inv in pending %}
+                <span class="pending-chip">
+                    <i class="fas fa-envelope"></i>
+                    {{ inv.student.username }} ({{ inv.student.email }})
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         {% endif %}
     </div>
-
-    {% if current_user in classroom.teachers %}
-    <div class="card">
-        <div class="card-header">Add Students</div>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-
-            <div class="form-group">
-                <label class="form-label">Upload Excel/CSV</label>
-                <input type="file" name="students_file" class="form-control" accept=".xlsx,.xls,.csv">
-                <small style="color: #888;">Column "Email" required.</small>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Manual Emails</label>
-                <textarea name="manual_emails" class="form-control" rows="3"
-                    placeholder="student1@example.com, student2@example.com"></textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Add Students</button>
-        </form>
-    </div>
-    {% endif %}
 </div>
+
+<!-- Teachers Tab -->
+<div id="tab-teachers" class="tab-pane">
+    <div class="card section-card">
+        <div class="card-header">Teachers in this Class</div>
+        <div style="padding: 10px 0; display: flex; flex-wrap: wrap;">
+            {% for teacher in classroom.teachers %}
+            <span class="teacher-chip">
+                <i class="fas fa-chalkboard-teacher"></i>
+                {{ teacher.username }}
+                {% if teacher.id == classroom.created_by_id %}
+                <span style="font-size: 0.7rem; background: var(--secondary-color); padding: 1px 6px; border-radius: 8px;">Owner</span>
+                {% endif %}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Exams Tab -->
+<div id="tab-exams" class="tab-pane">
+    <div class="card section-card">
+        <div class="card-header">Class Exams</div>
+        {% if classroom.exams %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Exam Name</th>
+                    <th>Date</th>
+                    <th>Duration</th>
+                    <th>Questions</th>
+                    {% if is_teacher %}<th>Actions</th>{% endif %}
+                    {% if is_student %}<th>Action</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for exam in classroom.exams %}
+                <tr>
+                    <td style="font-weight: 500;">{{ exam.name }}</td>
+                    <td>{{ exam.exam_date.strftime('%b %d, %Y') }}</td>
+                    <td>{{ exam.duration }} min</td>
+                    <td>{{ exam.questions|length }}</td>
+                    {% if is_teacher %}
+                    <td>
+                        <a href="{{ url_for('manage_exam', exam_id=exam.id) }}" class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;">Manage</a>
+                        <a href="{{ url_for('exam_analytics', exam_id=exam.id) }}" class="btn btn-primary" style="padding:4px 10px; font-size:0.8rem;">Results</a>
+                    </td>
+                    {% endif %}
+                    {% if is_student %}
+                    <td>
+                        <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn btn-primary" style="padding:4px 10px; font-size:0.8rem;">Take Exam</a>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #999; padding: 20px 0;">No exams assigned to this class yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Manage Tab (Teachers only) -->
+{% if is_teacher %}
+<div id="tab-manage" class="tab-pane">
+    <div class="view-grid grid-equal" style="gap: 20px;">
+
+        <!-- Invite Students -->
+        <div class="card">
+            <div class="card-header"><i class="fas fa-user-plus"></i> Invite Students</div>
+            <form method="POST" action="{{ url_for('invite_students_to_class', class_id=classroom.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="form-group">
+                    <label class="form-label">Upload Excel/CSV</label>
+                    <input type="file" name="students_file" class="form-control" accept=".xlsx,.xls,.csv">
+                    <small style="color:#888;">Needs an "Email" column.</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Or Enter Emails</label>
+                    <textarea name="manual_emails" class="form-control" rows="4"
+                        placeholder="student1@example.com&#10;student2@example.com"></textarea>
+                    <small style="color:#888;">One per line or comma-separated.</small>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">
+                    <i class="fas fa-paper-plane"></i> Send Invitations
+                </button>
+            </form>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Add Teacher -->
+            <div class="card">
+                <div class="card-header"><i class="fas fa-chalkboard-teacher"></i> Add Another Teacher</div>
+                <form method="POST" action="{{ url_for('add_teacher_to_class', class_id=classroom.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <div class="form-group">
+                        <label class="form-label">Teacher Email</label>
+                        <input type="email" name="teacher_email" class="form-control" placeholder="teacher@example.com" required>
+                        <small style="color:#888;">Must have an Examiner account.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Add Teacher</button>
+                </form>
+            </div>
+
+            <!-- Submit to Organization -->
+            <div class="card">
+                <div class="card-header"><i class="fas fa-building"></i> Organization</div>
+                {% if classroom.organization_id %}
+                <p style="color: #2E7D32; font-size: 0.9rem; margin-bottom: 12px;">
+                    <i class="fas fa-check-circle"></i>
+                    Under <strong>{{ classroom.org.name }}</strong>.
+                </p>
+                {% else %}
+                <form method="POST" action="{{ url_for('submit_class_to_org', class_id=classroom.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <div class="form-group">
+                        <label class="form-label">Organization Email</label>
+                        <input type="email" name="org_email" class="form-control" placeholder="org@example.com" required>
+                        <small style="color:#888;">The organization's login email.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Submit for Management</button>
+                </form>
+                {% endif %}
+
+                {% set pending_reqs = classroom.org_requests | selectattr('status', 'equalto', 'pending') | list %}
+                {% if pending_reqs %}
+                <div style="margin-top: 12px; font-size: 0.85rem; color: #E65100;">
+                    <i class="fas fa-hourglass-half"></i> {{ pending_reqs|length }} pending org request(s)
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    function showTab(name) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+</script>
 {% endblock %}

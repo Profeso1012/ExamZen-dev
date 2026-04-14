@@ -1,10 +1,10 @@
 {% extends "dashboard_layout.html" %}
-{% block title %}Taking Exam: {{ exam.name }}{% endblock %}
+{% block title %}{{ exam.name }}{% endblock %}
+
 {% block header %}
-<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-    <span>{{ exam.name }}</span>
-    <div id="timer"
-        style="background: #FFF0F0; color: #D93025; padding: 5px 15px; border-radius: 4px; font-weight: bold; font-family: monospace; font-size: 1.2rem;">
+<div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:10px;">
+    <span style="font-size:1rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ exam.name }}</span>
+    <div id="timer" style="background:#2D1B69; color:#FFD700; padding:6px 16px; border-radius:6px; font-weight:700; font-family:monospace; font-size:1.1rem; white-space:nowrap; flex-shrink:0;">
         --:--:--
     </div>
 </div>
@@ -12,220 +12,238 @@
 
 {% block content %}
 <style>
-    .question-palette {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 8px;
-        margin-bottom: 20px;
-    }
-
-    .palette-item {
-        width: 30px;
-        height: 30px;
+    .exam-layout {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.8rem;
+        gap: 20px;
+        height: calc(100vh - 120px);
     }
 
-    .palette-item.active {
-        background-color: var(--primary-color);
-        color: #fff;
-        border-color: var(--primary-color);
+    .question-area {
+        flex: 3;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
-    .palette-item.answered {
-        background-color: var(--secondary-color);
-        color: #000;
-        border-color: var(--secondary-color);
+    .question-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
     }
 
-    .question-container {
-        display: none;
-    }
-
-    .question-container.active {
-        display: block;
-    }
+    .question-container { display: none; }
+    .question-container.active { display: block; }
 
     .option-row {
-        margin-bottom: 12px;
-        padding: 12px;
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: border-color 0.15s, background 0.15s;
+        user-select: none;
     }
 
-    .option-row:hover {
-        background-color: #F8F9FA;
+    .option-row:hover { border-color: var(--primary-color); background: #f5f0ff; }
+    .option-row.selected { border-color: var(--primary-color); background: #ede8ff; }
+
+    .option-row input[type="radio"] { display: none; }
+
+    .opt-bubble {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: #e0e0e0; display: flex; align-items: center;
+        justify-content: center; font-weight: 700; font-size: 0.85rem;
+        flex-shrink: 0; transition: background 0.15s, color 0.15s;
     }
 
-    .option-row input[type="radio"] {
-        margin-right: 12px;
-        transform: scale(1.2);
+    .option-row.selected .opt-bubble {
+        background: var(--primary-color);
+        color: white;
     }
 
-    /* Mobile Responsive Styles */
+    .nav-bar {
+        border-top: 1px solid #eee;
+        padding: 14px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    /* Palette sidebar */
+    .palette-sidebar {
+        flex: 0 0 200px;
+        overflow-y: auto;
+    }
+
+    .palette-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        padding: 10px;
+    }
+
+    .p-item {
+        width: 32px; height: 32px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.75rem; cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .p-item.current { border: 2px solid var(--primary-color); font-weight: 700; }
+    .p-item.answered { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+    .timer-warning { background: #8B0000 !important; color: #FFD700 !important; animation: pulse-timer 1s infinite; }
+
+    @keyframes pulse-timer {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
     @media (max-width: 768px) {
-        .exam-layout {
-            flex-direction: column !important;
-            height: auto !important;
-        }
-
-        .question-area {
-            flex: none !important;
-            margin-bottom: 20px;
-        }
-
+        .exam-layout { flex-direction: column; height: auto; }
+        .question-area { height: auto; }
+        .question-scroll { max-height: 55vh; }
         .palette-sidebar {
-            flex: none !important;
-            position: sticky;
-            bottom: 0;
+            flex: none;
+            position: sticky; bottom: 0;
             background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             z-index: 10;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
         }
-
-        .question-palette {
-            grid-template-columns: repeat(8, 1fr) !important;
-            gap: 6px !important;
-        }
-
-        .palette-item {
-            width: 25px !important;
-            height: 25px !important;
-            font-size: 0.7rem !important;
-        }
-
-        .option-row {
-            padding: 10px !important;
-            font-size: 0.9rem;
-        }
-
-        .btn {
-            padding: 8px 16px !important;
-            font-size: 0.85rem !important;
-        }
-
-        .card-header {
-            font-size: 0.9rem !important;
-            padding: 10px !important;
-        }
+        .palette-grid { grid-template-columns: repeat(8, 1fr); }
+        .p-item { width: 28px; height: 28px; font-size: 0.7rem; }
     }
 </style>
 
-<div class="exam-layout" style="display: flex; gap: 30px; height: calc(100vh - 140px);">
-    <!-- Left: Question Area -->
-    <div class="card question-area" style="flex: 3; display: flex; flex-direction: column;">
+<div class="exam-layout">
+    <!-- Question Area -->
+    <div class="card question-area">
         <form id="examForm" method="POST" action="{{ url_for('submit_exam', exam_id=exam.id) }}"
-            style="flex: 1; display: flex; flex-direction: column;">
+              style="display:flex; flex-direction:column; height:100%;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-            <div style="flex: 1; padding: 10px; overflow-y: auto;">
+            <div class="question-scroll">
                 {% for q in questions %}
-                <div class="question-container" id="q-{{ loop.index0 }}" data-qid="{{ q.id }}">
-                    <h3 style="color: #444; margin-bottom: 20px;">Question {{ loop.index }}</h3>
-                    <p style="font-size: 1.1rem; line-height: 1.5; margin-bottom: 25px;">{{ q.question_text }}</p>
-
-                    <div class="options-list">
-                        {% set question_idx = loop.index0 %}
-                        {% for opt in q.options %}
-                        <label class="option-row" style="display: flex; align-items: center;">
-                            <input type="radio" name="question_{{ q.id }}" value="{{ opt.option_letter }}"
-                                onchange="markAnswered({{ question_idx }})">
-                            <span>{{ opt.option_text }}</span>
-                        </label>
-                        {% endfor %}
+                <div class="question-container" id="q-{{ loop.index0 }}">
+                    <div style="font-size:0.85rem; color:#999; margin-bottom:8px;">
+                        Question {{ loop.index }} of {{ questions|length }}
                     </div>
+                    <p style="font-size:1.05rem; font-weight:600; color:#1a1a1a; line-height:1.5; margin-bottom:20px;">
+                        {{ q.question_text }}
+                    </p>
+
+                    {% for opt in q.options|sort(attribute='option_letter') %}
+                    <label class="option-row">
+                        <input type="radio" name="question_{{ q.id }}" value="{{ opt.option_letter }}">
+                        <span class="opt-bubble">{{ opt.option_letter }}</span>
+                        <span>{{ opt.option_text }}</span>
+                    </label>
+                    {% endfor %}
                 </div>
                 {% endfor %}
             </div>
 
-            <div style="border-top: 1px solid #eee; padding-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                <button type="button" class="btn btn-outline" id="prevBtn"
-                    onclick="changeQuestion(-1)">Previous</button>
-                <button type="button" class="btn btn-primary" id="nextBtn" onclick="changeQuestion(1)">Next</button>
-                <button type="submit" class="btn btn-danger" id="submitBtn" style="display:none;"
-                    onclick="return confirm('Are you sure you want to submit?');">Submit Exam</button>
+            <div class="nav-bar">
+                <button type="button" class="btn btn-outline" id="prevBtn" onclick="changeQ(-1)">
+                    ← Previous
+                </button>
+                <span id="q-counter" style="font-size:0.9rem; color:#666;"></span>
+                <button type="button" class="btn btn-primary" id="nextBtn" onclick="changeQ(1)">
+                    Next →
+                </button>
+                <button type="submit" class="btn" id="submitBtn"
+                        style="display:none; background:var(--primary-color); color:white;"
+                        onclick="return confirm('Submit exam? You cannot change answers after submitting.');">
+                    Submit Exam
+                </button>
             </div>
         </form>
     </div>
 
-    <!-- Right: Palette -->
-    <div class="card palette-sidebar" style="flex: 1; overflow-y: auto;">
-        <div class="card-header">Question Palette</div>
-        <div class="question-palette">
-            {% for q in questions %}
-            <div class="palette-item" id="p-{{ loop.index0 }}" onclick="goToQuestion({{ loop.index0 }})">
-                {{ loop.index }}
+    <!-- Palette -->
+    <div class="card palette-sidebar">
+        <div class="card-header" style="font-size:0.85rem;">Questions</div>
+        <div class="palette-grid" id="palette"></div>
+        <div style="padding:10px; font-size:0.78rem; color:#666; border-top:1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                <span style="width:14px;height:14px;background:var(--primary-color);border-radius:3px;display:inline-block;"></span> Answered
             </div>
-            {% endfor %}
-        </div>
-        <div style="margin-top: 20px; font-size: 0.85rem; color: #666;">
-            <div><span
-                    style="display:inline-block;width:10px;height:10px;background:#fff;border:1px solid #ddd;margin-right:5px;"></span>
-                Unanswered</div>
-            <div><span
-                    style="display:inline-block;width:10px;height:10px;background:var(--secondary-color);border:1px solid var(--secondary-color);margin-right:5px;"></span>
-                Answered</div>
-            <div><span
-                    style="display:inline-block;width:10px;height:10px;background:var(--primary-color);border:1px solid var(--primary-color);margin-right:5px;"></span>
-                Current</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="width:14px;height:14px;background:#fff;border:1px solid #ddd;border-radius:3px;display:inline-block;"></span> Unanswered
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    let currentIndex = 0;
-    const totalQuestions = {{ questions| length }};
-    const endTime = new Date("{{ deadline }}").getTime();
-    // Assuming server time matches browser or passing explicit remaining seconds would be safer.
-    // For now, let's use a rough countdown. User said "auto submit".
+(function () {
+    const TOTAL = {{ questions|length }};
+    const DEADLINE_STR = "{{ deadline }}";   // e.g. "2026-02-21T10:30:00Z"
+    let current = 0;
 
-    // Better approximation: Duration passed from template
-    // const durationSecs = {{ exam.duration }} * 60; 
-    // Wait, end_time is absolute.
+    // ── Timer ──────────────────────────────────────────────────────────────────
+    const deadlineMs = new Date(DEADLINE_STR).getTime();
 
-    function updateTimer() {
-        const now = new Date().getTime();
-        // This parsing might be tricky with timezone. 
-        // Safest is to rely on JS parsing ISO format properly.
-        // However, Python isoformat might lack 'Z'. I will trust connection for now.
+    if (isNaN(deadlineMs)) {
+        console.error("Invalid deadline string:", DEADLINE_STR);
+        document.getElementById('timer').textContent = 'Timer error';
+    } else {
+        function tick() {
+            const remaining = deadlineMs - Date.now();
 
-        const distance = endTime - now;
+            if (remaining <= 0) {
+                document.getElementById('timer').textContent = '00:00:00';
+                document.getElementById('examForm').submit();
+                return;
+            }
 
-        if (distance < 0) {
-            document.getElementById("examForm").submit();
-            return;
+            const h = Math.floor(remaining / 3600000);
+            const m = Math.floor((remaining % 3600000) / 60000);
+            const s = Math.floor((remaining % 60000) / 1000);
+
+            const fmt = n => String(n).padStart(2, '0');
+            document.getElementById('timer').textContent = `${fmt(h)}:${fmt(m)}:${fmt(s)}`;
+
+            // Turn red when under 5 minutes
+            if (remaining < 300000) {
+                document.getElementById('timer').classList.add('timer-warning');
+            }
         }
 
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-        document.getElementById("timer").innerHTML =
-            (hours < 10 ? "0" + hours : hours) + ":" +
-            (minutes < 10 ? "0" + minutes : minutes) + ":" +
-            (seconds < 10 ? "0" + seconds : seconds);
+        tick();
+        setInterval(tick, 1000);
     }
 
-    setInterval(updateTimer, 1000);
-    updateTimer();
+    // ── Build palette ──────────────────────────────────────────────────────────
+    const palette = document.getElementById('palette');
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'p-item';
+        btn.id = 'p-' + i;
+        btn.textContent = i + 1;
+        btn.onclick = () => goTo(i);
+        palette.appendChild(btn);
+    }
 
-    function showQuestion(index) {
+    // ── Navigation ─────────────────────────────────────────────────────────────
+    function goTo(idx) {
         document.querySelectorAll('.question-container').forEach(el => el.classList.remove('active'));
-        document.getElementById('q-' + index).classList.add('active');
+        document.querySelectorAll('.p-item').forEach(el => el.classList.remove('current'));
 
-        document.querySelectorAll('.palette-item').forEach(el => el.classList.remove('active'));
-        document.getElementById('p-' + index).classList.add('active');
+        document.getElementById('q-' + idx).classList.add('active');
+        document.getElementById('p-' + idx).classList.add('current');
 
-        document.getElementById('prevBtn').disabled = (index === 0);
+        document.getElementById('prevBtn').disabled = (idx === 0);
+        document.getElementById('q-counter').textContent = `${idx + 1} / ${TOTAL}`;
 
-        if (index === totalQuestions - 1) {
+        if (idx === TOTAL - 1) {
             document.getElementById('nextBtn').style.display = 'none';
             document.getElementById('submitBtn').style.display = 'inline-flex';
         } else {
@@ -233,25 +251,37 @@
             document.getElementById('submitBtn').style.display = 'none';
         }
 
-        currentIndex = index;
+        current = idx;
     }
 
-    function changeQuestion(dir) {
-        const newIndex = currentIndex + dir;
-        if (newIndex >= 0 && newIndex < totalQuestions) {
-            showQuestion(newIndex);
-        }
-    }
+    window.changeQ = function (dir) {
+        const next = current + dir;
+        if (next >= 0 && next < TOTAL) goTo(next);
+    };
 
-    function goToQuestion(index) {
-        showQuestion(index);
-    }
+    window.goToQuestion = goTo;
 
-    function markAnswered(index) {
-        document.getElementById('p-' + index).classList.add('answered');
-    }
+    // ── Mark answered ──────────────────────────────────────────────────────────
+    // Attach to all radio inputs
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            // Find which question container this radio is in
+            const container = this.closest('.question-container');
+            if (!container) return;
+            const idx = parseInt(container.id.replace('q-', ''));
+            document.getElementById('p-' + idx).classList.add('answered');
+
+            // Highlight selected option row
+            const name = this.name;
+            document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+                r.closest('.option-row').classList.remove('selected');
+            });
+            this.closest('.option-row').classList.add('selected');
+        });
+    });
 
     // Init
-    showQuestion(0);
+    goTo(0);
+})();
 </script>
 {% endblock %}

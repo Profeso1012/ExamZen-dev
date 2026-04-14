@@ -1,3 +1,4 @@
 {
-    "terminal.integrated.cursorStyle": "line"
+    "terminal.integrated.cursorStyle": "line",
+    "html.autoClosingTags": false
 }
